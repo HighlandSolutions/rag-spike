@@ -421,7 +421,7 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [x] Add chat history persistence
 
 ### Phase 12: Advanced RAG Improvements
-- [ ] Improve chunking strategy (semantic chunking)
+- [x] Improve chunking strategy (semantic chunking)
 - [ ] Add re-ranking for search results
 - [x] Add query expansion/rewriting
 
@@ -548,11 +548,15 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
    - ✅ Add conversation context integration
    - ✅ Cache expanded/rewritten queries to reduce LLM calls
    - ✅ Make query processing optional via feature flag
-3. **Phase 12.3**: Semantic Chunking (moderate impact, higher complexity)
-   - Implement semantic boundary detection
-   - Add adaptive chunk sizes
-   - Update ingestion pipeline
-   - Consider re-chunking existing documents (optional)
+3. **Phase 12.3**: Semantic Chunking (moderate impact, higher complexity) ✅ COMPLETED
+   - ✅ Implement semantic boundary detection
+   - ✅ Add adaptive chunk sizes
+   - ✅ Update ingestion pipeline
+   - ✅ Add content-aware chunking for code blocks, lists, tables, headers
+   - ✅ Add hierarchical chunking support
+   - ✅ Add fallback to fixed-size chunking
+   - ✅ Add comprehensive tests
+   - ⚠️ Re-chunking existing documents (optional - can be done later if needed)
 
 **Technical Considerations:**
 - **Cost Management**: Re-ranking and query expansion increase LLM API calls
