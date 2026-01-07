@@ -423,7 +423,7 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ### Phase 12: Advanced RAG Improvements
 - [ ] Improve chunking strategy (semantic chunking)
 - [ ] Add re-ranking for search results
-- [ ] Add query expansion/rewriting
+- [x] Add query expansion/rewriting
 
 #### Recommended Approach
 
@@ -540,10 +540,14 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
    - Implement cross-encoder re-ranking
    - Add diversity re-ranking (MMR)
    - Measure improvement in retrieval quality
-2. **Phase 12.2**: Query Expansion/Rewriting (high impact, moderate complexity)
-   - Implement LLM-based query expansion
-   - Add query rewriting with multiple variations
-   - Integrate with search flow
+2. **Phase 12.2**: Query Expansion/Rewriting (high impact, moderate complexity) ✅ COMPLETED
+   - ✅ Implement LLM-based query expansion
+   - ✅ Add query rewriting with multiple variations
+   - ✅ Integrate with search flow
+   - ✅ Add query understanding layer (intent classification, entity extraction)
+   - ✅ Add conversation context integration
+   - ✅ Cache expanded/rewritten queries to reduce LLM calls
+   - ✅ Make query processing optional via feature flag
 3. **Phase 12.3**: Semantic Chunking (moderate impact, higher complexity)
    - Implement semantic boundary detection
    - Add adaptive chunk sizes

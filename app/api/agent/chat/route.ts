@@ -9,7 +9,11 @@ import { determineContentFilters } from '@/lib/agent/content-filters';
 import { determineToolsToExecute, executeTools } from '@/lib/agent/tools';
 import { composePrompt, extractChunkIds } from '@/lib/agent/prompt-builder';
 import { streamLLMResponse } from '@/lib/agent/llm-client';
+import { getSupabaseServerClient } from '@/lib/supabase/client';
 import type { ChatRequest, ApiError, UserContext, SearchRequest, ContentType } from '@/types/domain';
+import type { ChatMessage } from '@/types/chat';
+import type { ChatMessageRow } from '@/types/database';
+import type { QueryProcessingConfig } from '@/lib/rag/query-processing';
 
 /**
  * Default tenant ID (for PoC, can be made configurable later)
@@ -47,6 +51,33 @@ export async function POST(request: NextRequest) {
     // Determine content filters based on user context
     const contentFilters = determineContentFilters(chatRequest.userContext);
 
+    // Load conversation history if session ID is provided
+    let conversationHistory: ChatMessage[] | undefined;
+    if (chatRequest.sessionId) {
+      try {
+        const supabase = getSupabaseServerClient();
+        const { data: messagesData } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('session_id', chatRequest.sessionId)
+          .order('created_at', { ascending: true });
+
+        if (messagesData && messagesData.length > 0) {
+          conversationHistory = (messagesData as ChatMessageRow[]).map((msg) => ({
+            id: msg.id,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+            chunkIds: msg.chunk_ids || undefined,
+            error: msg.error || undefined,
+          }));
+        }
+      } catch (error) {
+        // Log but don't fail if history loading fails
+        console.warn('Failed to load conversation history:', error);
+      }
+    }
+
     // Build search request
     const searchRequest: SearchRequest = {
       tenantId: DEFAULT_TENANT_ID,
@@ -56,8 +87,21 @@ export async function POST(request: NextRequest) {
       filters: contentFilters ? { contentType: contentFilters as ContentType[] } : undefined,
     };
 
-    // Perform RAG search
-    const searchResponse = await search(searchRequest);
+    // Query processing configuration (can be customized via env vars or request body)
+    const queryProcessingConfig: Partial<QueryProcessingConfig> = {
+      enabled: process.env.ENABLE_QUERY_PROCESSING === 'true',
+      enableExpansion: process.env.ENABLE_QUERY_EXPANSION === 'true',
+      enableRewriting: process.env.ENABLE_QUERY_REWRITING === 'true',
+      enableUnderstanding: process.env.ENABLE_QUERY_UNDERSTANDING === 'true',
+    };
+
+    // Perform RAG search with query processing
+    const searchResponse = await search(
+      searchRequest,
+      undefined, // rerankingConfig (uses defaults)
+      queryProcessingConfig,
+      conversationHistory
+    );
 
     // Check if no relevant chunks were found
     if (searchResponse.chunks.length === 0) {
