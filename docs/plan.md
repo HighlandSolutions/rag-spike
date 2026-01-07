@@ -415,14 +415,21 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 
 ## Phase 10: Optional Enhancements (Post-MVP)
 
-- [ ] Add document upload UI (beyond CLI)
-- [ ] Add document management (view/delete ingested docs)
+### Phase 11: Document Management UI
+- [x] Add document upload UI (beyond CLI)
+- [x] Add document management (view/delete ingested docs)
+
+### Phase 12: Chat History & Export
 - [ ] Add chat history persistence
 - [ ] Add export chat functionality
+
+### Phase 13: Advanced RAG Improvements
 - [ ] Improve chunking strategy (semantic chunking)
-- [ ] Add support for more file types (Word, Markdown, etc.)
 - [ ] Add re-ranking for search results
 - [ ] Add query expansion/rewriting
+
+### Phase 14: Extended File Type Support
+- [ ] Add support for more file types (Word, Markdown, etc.)
 
 ---
 

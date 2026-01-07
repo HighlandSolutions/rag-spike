@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
@@ -136,15 +137,23 @@ export const ChatContainer = () => {
       <header className="border-b p-4" role="banner">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <h1 className="text-2xl font-bold">RAG Q&A Chat</h1>
-          <button
-            type="button"
-            onClick={() => setShowUserContextForm(!showUserContextForm)}
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
-            aria-label={showUserContextForm ? 'Hide profile form' : 'Show profile form'}
-            aria-expanded={showUserContextForm}
-          >
-            {showUserContextForm ? 'Hide' : 'Edit'} Profile
-          </button>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/documents"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+            >
+              Documents
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowUserContextForm(!showUserContextForm)}
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+              aria-label={showUserContextForm ? 'Hide profile form' : 'Show profile form'}
+              aria-expanded={showUserContextForm}
+            >
+              {showUserContextForm ? 'Hide' : 'Edit'} Profile
+            </button>
+          </div>
         </div>
       </header>
 
