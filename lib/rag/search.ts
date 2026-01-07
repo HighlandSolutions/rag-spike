@@ -6,6 +6,7 @@
 import { getSupabaseServerClient } from '@/lib/supabase/client';
 import { generateEmbedding } from '@/lib/ingestion/embeddings';
 import { logError } from '@/lib/utils/logger';
+import { rerank, type RerankingConfig } from '@/lib/rag/reranking';
 import type { SearchRequest, SearchResponse, SearchResult, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ChunkRow } from '@/types/database';
 
@@ -230,10 +231,13 @@ const mergeResults = (
 };
 
 /**
- * Main search function implementing hybrid search
+ * Main search function implementing hybrid search with optional re-ranking
  * Optimized with query result caching and improved error handling
  */
-export const search = async (request: SearchRequest): Promise<SearchResponse> => {
+export const search = async (
+  request: SearchRequest,
+  rerankingConfig?: Partial<RerankingConfig>
+): Promise<SearchResponse> => {
   const startTime = Date.now();
   const { tenantId, query, k = 8, filters } = request;
 
@@ -287,15 +291,21 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
       );
     }
 
-    // Take top-k results
-    const topResults = mergedResults.slice(0, k);
-
-    // Convert to SearchResult format
-    const searchResults: SearchResult[] = topResults.map((result) => ({
+    // Convert to SearchResult format for re-ranking
+    const candidateResults: SearchResult[] = mergedResults.map((result) => ({
       chunk: result.chunk,
       score: result.score,
       matchType: result.matchType,
     }));
+
+    // Apply re-ranking if enabled
+    // Re-ranking will take top-k candidates and return top-k results
+    const rerankingConfigWithDefaults: Partial<RerankingConfig> = {
+      topKResults: k,
+      ...rerankingConfig,
+    };
+
+    const finalResults = await rerank(query, candidateResults, rerankingConfigWithDefaults);
 
     const queryTime = Date.now() - startTime;
 
@@ -305,8 +315,8 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
     }
 
     return {
-      chunks: searchResults,
-      totalCount: searchResults.length,
+      chunks: finalResults,
+      totalCount: finalResults.length,
       queryTime,
     };
   } catch (error) {

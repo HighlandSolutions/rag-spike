@@ -425,6 +425,149 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [ ] Add re-ranking for search results
 - [ ] Add query expansion/rewriting
 
+#### Recommended Approach
+
+**1. Semantic Chunking Strategy**
+
+**Current State:**
+- Fixed-size chunking (~2000 chars) with sentence boundary detection
+- Simple overlap mechanism (200 chars)
+- Breaks at periods/newlines when possible
+
+**Improvements:**
+- **Semantic Boundary Detection**: Use embeddings to identify semantic boundaries
+  - Generate embeddings for candidate split points (sentences, paragraphs)
+  - Calculate cosine similarity between adjacent segments
+  - Split at points with lowest similarity (semantic breaks)
+  - Preserve context by ensuring chunks contain complete semantic units
+- **Adaptive Chunk Sizes**: Vary chunk size based on content density
+  - Smaller chunks for dense technical content
+  - Larger chunks for narrative/descriptive content
+  - Use token density heuristics to determine optimal size
+- **Hierarchical Chunking**: Create multi-level chunk hierarchy
+  - Document → Sections → Paragraphs → Sentences
+  - Store parent-child relationships in metadata
+  - Enable retrieval at different granularity levels
+- **Content-Aware Chunking**: Special handling for different content types
+  - Tables: Keep rows together, chunk by logical groups
+  - Lists: Keep list items together
+  - Code blocks: Keep complete blocks intact
+  - Headers: Include header context in following chunks
+
+**Implementation Plan:**
+1. Create `lib/ingestion/semantic-chunking.ts` with semantic boundary detection
+2. Use embedding similarity to find optimal split points
+3. Add configuration for adaptive chunk sizes per content type
+4. Update ingestion pipeline to use semantic chunking (with fallback to fixed-size)
+5. Add migration strategy for re-chunking existing documents (optional)
+
+**2. Re-ranking for Search Results**
+
+**Current State:**
+- Hybrid scoring: weighted combination of keyword (30%) + vector (70%) scores
+- Simple merge and sort by hybrid score
+- No cross-encoder or LLM-based re-ranking
+
+**Improvements:**
+- **Cross-Encoder Re-ranking**: Use bi-encoder model for precise relevance scoring
+  - Retrieve top-k candidates (e.g., top 20-50) from hybrid search
+  - Use cross-encoder model (e.g., `cross-encoder/ms-marco-MiniLM-L-6-v2`) to score query-chunk pairs
+  - Re-rank by cross-encoder scores
+  - Return top-k final results (e.g., top 8)
+- **LLM-Based Re-ranking**: Use LLM to evaluate relevance (optional, more expensive)
+  - Generate relevance scores using LLM with structured prompt
+  - Useful for complex queries requiring reasoning
+  - Can incorporate user context in re-ranking
+- **Diversity Re-ranking**: Ensure result diversity
+  - Avoid returning multiple chunks from same document/section
+  - Use MMR (Maximal Marginal Relevance) to balance relevance and diversity
+  - Penalize redundant information
+- **Context-Aware Re-ranking**: Incorporate user context in scoring
+  - Boost chunks matching user role/level preferences
+  - Adjust scores based on content type relevance to user profile
+  - Consider learning preferences in ranking
+
+**Implementation Plan:**
+1. Create `lib/rag/reranking.ts` with cross-encoder re-ranking
+2. Integrate with existing search flow: hybrid search → re-rank → return top-k
+3. Add configuration for re-ranking (enable/disable, model selection, top-k candidates)
+4. Add caching for re-ranking scores (same query-chunk pairs)
+5. Add metrics/logging for re-ranking effectiveness
+6. Make re-ranking optional via feature flag
+
+**3. Query Expansion/Rewriting**
+
+**Current State:**
+- Query used as-is for both keyword and vector search
+- No expansion or rewriting
+
+**Improvements:**
+- **Query Expansion**: Generate related terms and synonyms
+  - Use LLM to generate related terms, synonyms, and contextually relevant phrases
+  - Expand query with domain-specific terminology
+  - Use embedding-based expansion: find similar queries from query history
+  - Combine original query with expanded terms (OR logic for keyword search)
+- **Query Rewriting**: Reformulate query for better retrieval
+  - Use LLM to rewrite query in different ways:
+    - More specific version
+    - More general version
+    - Question-to-statement conversion
+    - Technical-to-layman conversion (or vice versa)
+  - Generate multiple query variations and search with each
+  - Merge results from all variations
+- **Query Understanding**: Parse query intent
+  - Identify query type (factual, how-to, comparison, etc.)
+  - Extract key entities and concepts
+  - Determine required content types
+  - Adjust search strategy based on intent
+- **Contextual Query Enhancement**: Use conversation history
+  - Incorporate previous messages for context
+  - Resolve pronouns and references
+  - Add implicit context from user profile
+
+**Implementation Plan:**
+1. Create `lib/rag/query-processing.ts` with query expansion/rewriting
+2. Add LLM-based query expansion (generate related terms)
+3. Add query rewriting (multiple variations)
+4. Integrate with search: expand/rewrite → search with variations → merge results
+5. Add query understanding layer (intent classification, entity extraction)
+6. Add conversation context integration
+7. Cache expanded/rewritten queries to reduce LLM calls
+8. Make query processing optional via feature flag
+
+**Priority & Phasing:**
+1. **Phase 12.1**: Re-ranking (highest impact, moderate complexity)
+   - Implement cross-encoder re-ranking
+   - Add diversity re-ranking (MMR)
+   - Measure improvement in retrieval quality
+2. **Phase 12.2**: Query Expansion/Rewriting (high impact, moderate complexity)
+   - Implement LLM-based query expansion
+   - Add query rewriting with multiple variations
+   - Integrate with search flow
+3. **Phase 12.3**: Semantic Chunking (moderate impact, higher complexity)
+   - Implement semantic boundary detection
+   - Add adaptive chunk sizes
+   - Update ingestion pipeline
+   - Consider re-chunking existing documents (optional)
+
+**Technical Considerations:**
+- **Cost Management**: Re-ranking and query expansion increase LLM API calls
+  - Use caching aggressively
+  - Make features configurable/optional
+  - Monitor API costs and usage
+- **Performance**: Re-ranking adds latency
+  - Use async processing where possible
+  - Limit candidate set for re-ranking (top 20-50)
+  - Consider batch processing for multiple queries
+- **Evaluation**: Measure improvements
+  - Track retrieval metrics (precision@k, recall@k, MRR)
+  - A/B test new features
+  - Collect user feedback on answer quality
+- **Backward Compatibility**: Ensure existing functionality continues to work
+  - Feature flags for gradual rollout
+  - Fallback to current implementation if new features fail
+  - Maintain API compatibility
+
 ### Phase 13: Extended File Type Support
 - [ ] Add support for more file types (Word, Markdown, etc.)
 

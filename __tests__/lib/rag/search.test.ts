@@ -10,6 +10,13 @@ import type { SearchRequest } from '@/types/domain';
 // Mock dependencies
 jest.mock('@/lib/supabase/client');
 jest.mock('@/lib/ingestion/embeddings');
+jest.mock('@/lib/rag/reranking', () => ({
+  rerank: jest.fn((query, candidates, config) => {
+    // Default behavior: return top-k candidates (re-ranking disabled by default)
+    const topK = config?.topKResults || 8;
+    return Promise.resolve(candidates.slice(0, topK));
+  }),
+}));
 
 describe('rag/search', () => {
   const mockSupabaseClient = {

@@ -3,6 +3,8 @@
  * Provides embedding generation with caching support
  */
 
+// Import shim for Node.js environment (required for OpenAI SDK)
+import 'openai/shims/node';
 import OpenAI from 'openai';
 import { logError, logApiUsage } from '@/lib/utils/logger';
 
