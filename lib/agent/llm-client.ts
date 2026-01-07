@@ -49,6 +49,17 @@ export const streamLLMResponse = async function* (
   config: Partial<LLMConfig> = {}
 ): AsyncGenerator<ChatResponseChunk, void, unknown> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
+  
+  // Problem 1: Enforce streaming mode for this function
+  if (!finalConfig.stream) {
+    yield {
+      text: '',
+      isComplete: true,
+      error: 'Streaming is required for streamLLMResponse. Use getLLMResponse for non-streaming responses.',
+    };
+    return;
+  }
+
   const client = getOpenAIClient();
 
   try {
@@ -66,11 +77,22 @@ export const streamLLMResponse = async function* (
       ],
       temperature: finalConfig.temperature,
       max_tokens: finalConfig.maxTokens,
-      stream: finalConfig.stream,
+      stream: true, // Problem 2: Always use true since we're in a streaming function
     });
 
+    // Problem 3: Properly check if response is async iterable
+    if (typeof stream[Symbol.asyncIterator] !== 'function') {
+      yield {
+        text: '',
+        isComplete: true,
+        error: 'OpenAI API did not return a streamable response',
+      };
+      return;
+    }
+
+    // Problem 4: Process all chunks from the stream
     for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
+      const content = chunk.choices?.[0]?.delta?.content || '';
 
       if (content) {
         yield {
@@ -86,10 +108,16 @@ export const streamLLMResponse = async function* (
       isComplete: true,
     };
   } catch (error) {
+    // Problem 5: Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorDetails = error instanceof Error && 'status' in error 
+      ? ` (Status: ${(error as { status?: number }).status})` 
+      : '';
+    
     yield {
       text: '',
       isComplete: true,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: `LLM streaming error: ${errorMessage}${errorDetails}`,
     };
   }
 };

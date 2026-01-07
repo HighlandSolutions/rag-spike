@@ -7,9 +7,11 @@ import { ChatInput } from './chat-input';
 import { UserContextForm } from './user-context-form';
 import type { ChatMessage } from '@/types/chat';
 import type { UserContext } from '@/types/domain';
+import type { SourceCardData } from './source-card';
 import { loadUserContext } from '@/lib/storage';
 import { updateMessageWithStream, completeStreamingMessage } from '@/lib/streaming';
 import { callAgentAPI } from '@/lib/agent/api-client';
+import { fetchCitationMetadata } from '@/lib/citations/fetcher';
 
 interface ChatContainerProps {
   // No props needed - component handles API calls directly
@@ -20,6 +22,7 @@ export const ChatContainer = ({}: ChatContainerProps = {}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [showUserContextForm, setShowUserContextForm] = useState(false);
+  const [citationsMap, setCitationsMap] = useState<Map<string, SourceCardData[]>>(new Map());
   const streamingMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -67,17 +70,28 @@ export const ChatContainer = ({}: ChatContainerProps = {}) => {
         // Call agent API with streaming
         const result = await callAgentAPI(content, userContext || undefined, handleStreamChunk);
 
-        // Mark streaming as complete with final answer
+        // Mark streaming as complete with final answer and chunk IDs
         setMessages((prev) => {
           if (streamingMessageIdRef.current) {
             return completeStreamingMessage(
               prev,
               streamingMessageIdRef.current,
-              result.answer || prev.find((m) => m.id === streamingMessageIdRef.current)?.content || ''
+              result.answer || prev.find((m) => m.id === streamingMessageIdRef.current)?.content || '',
+              result.chunkIds
             );
           }
           return prev;
         });
+
+        // Fetch citation metadata if chunk IDs are available
+        if (result.chunkIds && result.chunkIds.length > 0 && streamingMessageIdRef.current) {
+          const citations = await fetchCitationMetadata(result.chunkIds);
+          setCitationsMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(streamingMessageIdRef.current!, citations);
+            return newMap;
+          });
+        }
       } catch {
         setMessages((prev) =>
           prev.map((msg) =>
@@ -121,7 +135,7 @@ export const ChatContainer = ({}: ChatContainerProps = {}) => {
       <div className="mx-auto flex w-full max-w-6xl flex-1 gap-4 p-4">
         <div className="flex flex-1 flex-col">
           <Card className="flex flex-1 flex-col overflow-hidden">
-            <MessageList messages={messages} />
+            <MessageList messages={messages} citationsMap={citationsMap} />
             <ChatInput
               onSendMessage={handleSendMessage}
               disabled={isLoading}

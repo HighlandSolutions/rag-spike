@@ -291,27 +291,27 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 6: Citations & Source Cards
 
 ### Citation Markers
-- [ ] Parse answer text for chunk references
-- [ ] Add inline superscript/footnote markers in answer
-- [ ] Make markers clickable (scroll to source card)
+- [x] Parse answer text for chunk references
+- [x] Add inline superscript/footnote markers in answer
+- [x] Make markers clickable (scroll to source card)
 
 ### Source Card Component
-- [ ] Create SourceCard component
-- [ ] Display document name
-- [ ] Display page/row information
-- [ ] Display short snippet preview
-- [ ] Add horizontal layout for multiple cards
-- [ ] Style with Tailwind CSS
+- [x] Create SourceCard component
+- [x] Display document name
+- [x] Display page/row information
+- [x] Display short snippet preview
+- [x] Add horizontal layout for multiple cards
+- [x] Style with Tailwind CSS
 
 ### Chunk Metadata Retrieval
-- [ ] Query database for chunk metadata by IDs
-- [ ] Map chunk IDs to document names and locations
-- [ ] Extract preview snippets
+- [x] Query database for chunk metadata by IDs
+- [x] Map chunk IDs to document names and locations
+- [x] Extract preview snippets
 
 ### Integration
-- [ ] Display source cards under each assistant answer
-- [ ] Link citation markers to source cards
-- [ ] Add smooth scrolling to source cards
+- [x] Display source cards under each assistant answer
+- [x] Link citation markers to source cards
+- [x] Add smooth scrolling to source cards
 
 ---
 
