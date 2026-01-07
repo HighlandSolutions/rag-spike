@@ -38,3 +38,4 @@ Since you're using **OpenAI for your LLM**, I recommend using **OpenAI embedding
 
 **Stick with OpenAI embeddings** - it's the simplest, most integrated solution that will work great for your RAG application.
 
+
