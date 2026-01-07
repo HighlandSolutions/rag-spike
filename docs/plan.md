@@ -225,66 +225,66 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 5: Agent/Orchestrator Service
 
 ### Agent API (`/api/agent/chat`)
-- [ ] Create stateless HTTP agent/orchestrator service
-- [ ] Accept request with:
-  - [ ] User question
-  - [ ] User metadata (role, level, target_job, learning_preferences)
-  - [ ] Session context (optional)
-- [ ] Implement stateless design (no session storage)
+- [x] Create stateless HTTP agent/orchestrator service
+- [x] Accept request with:
+  - [x] User question
+  - [x] User metadata (role, level, target_job, learning_preferences)
+  - [x] Session context (optional)
+- [x] Implement stateless design (no session storage)
 
 ### Content Filtering Logic
-- [ ] Determine content filters based on user context:
-  - [ ] Map user role/level to content types
-  - [ ] Apply learning preferences to filter content
-  - [ ] Support explicit filter overrides
-- [ ] Call RAG search API with appropriate filters
-- [ ] Handle multiple filter combinations
+- [x] Determine content filters based on user context:
+  - [x] Map user role/level to content types
+  - [x] Apply learning preferences to filter content
+  - [x] Support explicit filter overrides
+- [x] Call RAG search API with appropriate filters
+- [x] Handle multiple filter combinations
 
 ### Tool Integration
-- [ ] Design tool interface/abstraction
-- [ ] Implement eligibility check tool (example)
-- [ ] Implement other tools as needed (calculations, lookups, etc.)
-- [ ] Execute tools based on query intent
-- [ ] Collect tool outputs for prompt construction
+- [x] Design tool interface/abstraction
+- [x] Implement eligibility check tool (example)
+- [x] Implement other tools as needed (calculations, lookups, etc.)
+- [x] Execute tools based on query intent
+- [x] Collect tool outputs for prompt construction
 
 ### Structured Prompt Composition
-- [ ] Create prompt builder service
-- [ ] Compose structured prompt with sections:
-  - [ ] System instructions (context-aware based on user role)
-  - [ ] User profile section (role, level, target_job, learning_preferences)
-  - [ ] Retrieved chunks section (with identifiers and metadata)
-  - [ ] Tool outputs section (eligibility checks, calculations, etc.)
-  - [ ] User question
-- [ ] Format chunks with clear identifiers for citation
-- [ ] Optimize prompt length and structure
+- [x] Create prompt builder service
+- [x] Compose structured prompt with sections:
+  - [x] System instructions (context-aware based on user role)
+  - [x] User profile section (role, level, target_job, learning_preferences)
+  - [x] Retrieved chunks section (with identifiers and metadata)
+  - [x] Tool outputs section (eligibility checks, calculations, etc.)
+  - [x] User question
+- [x] Format chunks with clear identifiers for citation
+- [x] Optimize prompt length and structure
 
 ### LLM Integration
-- [ ] Set up LLM API client with streaming support
-- [ ] Call LLM API with structured prompt
-- [ ] Handle streaming responses
-- [ ] Parse LLM response
-- [ ] Extract answer text and referenced chunk IDs
-- [ ] Handle tool calls/function calling if needed
+- [x] Set up LLM API client with streaming support
+- [x] Call LLM API with structured prompt
+- [x] Handle streaming responses
+- [x] Parse LLM response
+- [x] Extract answer text and referenced chunk IDs
+- [x] Handle tool calls/function calling if needed
 
 ### Streaming Implementation
-- [ ] Implement Server-Sent Events (SSE) or streaming response
-- [ ] Stream LLM tokens to frontend in real-time
-- [ ] Handle streaming errors gracefully
-- [ ] Support both streaming and non-streaming modes
+- [x] Implement Server-Sent Events (SSE) or streaming response
+- [x] Stream LLM tokens to frontend in real-time
+- [x] Handle streaming errors gracefully
+- [x] Support both streaming and non-streaming modes
 
 ### API Response
-- [ ] Return streaming response (text chunks)
-- [ ] Return final answer text
-- [ ] Return list of chunk IDs used
-- [ ] Return metadata for chunks (for citations)
-- [ ] Return tool outputs (if any)
-- [ ] Handle API errors gracefully
+- [x] Return streaming response (text chunks)
+- [x] Return final answer text
+- [x] Return list of chunk IDs used
+- [x] Return metadata for chunks (for citations)
+- [x] Return tool outputs (if any)
+- [x] Handle API errors gracefully
 
 ### Integration
-- [ ] Connect frontend chat to `/api/agent/chat` endpoint
-- [ ] Handle streaming responses in frontend
-- [ ] Display assistant responses in chat UI (streaming)
-- [ ] Handle loading and error states
+- [x] Connect frontend chat to `/api/agent/chat` endpoint
+- [x] Handle streaming responses in frontend
+- [x] Display assistant responses in chat UI (streaming)
+- [x] Handle loading and error states
 
 ---
 
