@@ -3,12 +3,14 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './message-bubble';
 import type { ChatMessage } from '@/types/chat';
+import type { SourceCardData } from './source-card';
 
 interface MessageListProps {
   messages: ChatMessage[];
+  citationsMap?: Map<string, SourceCardData[]>;
 }
 
-export const MessageList = ({ messages }: MessageListProps) => {
+export const MessageList = ({ messages, citationsMap = new Map() }: MessageListProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -36,9 +38,16 @@ export const MessageList = ({ messages }: MessageListProps) => {
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-      {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
-      ))}
+      {messages.map((message) => {
+        const citations = citationsMap.get(message.id) || [];
+        return (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            citations={citations}
+          />
+        );
+      })}
       <div ref={messagesEndRef} />
     </div>
   );

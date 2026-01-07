@@ -10,5 +10,6 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   isLoading?: boolean;
+  chunkIds?: string[];
 }
 

@@ -30,7 +30,8 @@ export function updateMessageWithStream(
 export function completeStreamingMessage(
   messages: ChatMessage[],
   messageId: string,
-  finalContent: string
+  finalContent: string,
+  chunkIds?: string[]
 ): ChatMessage[] {
   return messages.map((msg) => {
     if (msg.id === messageId) {
@@ -38,6 +39,7 @@ export function completeStreamingMessage(
         ...msg,
         content: finalContent,
         isLoading: false,
+        chunkIds: chunkIds || msg.chunkIds,
       };
     }
     return msg;
