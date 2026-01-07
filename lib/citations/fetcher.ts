@@ -51,23 +51,21 @@ export const fetchCitationMetadata = async (
     });
 
     // Build citations array in the same order as chunkIds
-    const citations: SourceCardData[] = chunkIds
-      .map((chunkId) => {
-        const citationData = citationDataMap.get(chunkId);
-        if (!citationData) {
-          return null;
-        }
+    const citations: SourceCardData[] = [];
+    for (const chunkId of chunkIds) {
+      const citationData = citationDataMap.get(chunkId);
+      if (citationData) {
         const citationNumber = citationNumberMap.get(chunkId) || 1;
-        return {
+        citations.push({
           chunkId: citationData.chunkId,
           documentName: citationData.documentName,
           location: citationData.location,
           snippet: citationData.snippet,
           contentType: citationData.contentType,
           citationNumber,
-        };
-      })
-      .filter((citation): citation is SourceCardData => citation !== null);
+        });
+      }
+    }
 
     return citations;
   } catch (error) {

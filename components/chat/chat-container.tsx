@@ -13,11 +13,7 @@ import { updateMessageWithStream, completeStreamingMessage } from '@/lib/streami
 import { callAgentAPI } from '@/lib/agent/api-client';
 import { fetchCitationMetadata } from '@/lib/citations/fetcher';
 
-interface ChatContainerProps {
-  // No props needed - component handles API calls directly
-}
-
-export const ChatContainer = ({}: ChatContainerProps = {}) => {
+export const ChatContainer = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
