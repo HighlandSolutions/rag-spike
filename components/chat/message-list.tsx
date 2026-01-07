@@ -23,8 +23,8 @@ export const MessageList = ({ messages, citationsMap = new Map() }: MessageListP
 
   if (messages.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
+      <div className="flex h-full items-center justify-center" role="status" aria-label="Empty chat">
+        <div className="text-center animate-in fade-in duration-300">
           <p className="text-lg font-medium text-muted-foreground">
             Start a conversation
           </p>
@@ -37,15 +37,17 @@ export const MessageList = ({ messages, citationsMap = new Map() }: MessageListP
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-      {messages.map((message) => {
+    <div className="flex flex-1 flex-col gap-3 sm:gap-4 overflow-y-auto p-2 sm:p-4" role="log" aria-label="Chat messages">
+      {messages.map((message, index) => {
         const citations = citationsMap.get(message.id) || [];
         return (
-          <MessageBubble
+          <div
             key={message.id}
-            message={message}
-            citations={citations}
-          />
+            className="animate-in fade-in slide-in-from-bottom-2 duration-200"
+            style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+          >
+            <MessageBubble message={message} citations={citations} />
+          </div>
         );
       })}
       <div ref={messagesEndRef} />

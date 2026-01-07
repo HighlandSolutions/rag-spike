@@ -59,6 +59,18 @@ export async function POST(request: NextRequest) {
     // Perform RAG search
     const searchResponse = await search(searchRequest);
 
+    // Check if no relevant chunks were found
+    if (searchResponse.chunks.length === 0) {
+      const error: ApiError = {
+        error: 'NoRelevantChunks',
+        message: 'No relevant information found in the knowledge base. Please try rephrasing your question or check if the content has been ingested.',
+      };
+      return new Response(JSON.stringify(error), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Determine which tools to execute
     const toolsToExecute = determineToolsToExecute(
       chatRequest.question,
@@ -133,8 +145,25 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
+          // Determine error type and provide user-friendly message
+          let errorMessage = 'An unexpected error occurred. Please try again.';
+          let errorType = 'StreamError';
+
+          if (error instanceof Error) {
+            if (error.message.includes('LLM') || error.message.includes('OpenAI') || error.message.includes('API')) {
+              errorType = 'LLMError';
+              errorMessage = 'The AI service is temporarily unavailable. Please try again in a moment.';
+            } else if (error.message.includes('network') || error.message.includes('fetch')) {
+              errorType = 'NetworkError';
+              errorMessage = 'Network connection error. Please check your internet connection and try again.';
+            } else {
+              errorMessage = error.message;
+            }
+          }
+
           const errorData = JSON.stringify({
-            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            error: errorType,
+            message: errorMessage,
             isComplete: true,
           });
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));

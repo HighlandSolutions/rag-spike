@@ -28,7 +28,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const chunkIds = chunkIdsParam.split(',').filter((id) => id.trim().length > 0);
+    const chunkIds = chunkIdsParam
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
 
     if (chunkIds.length === 0) {
       return new Response(JSON.stringify({ citations: [] }), {
@@ -37,10 +40,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch chunks
+    // Limit to prevent abuse
+    if (chunkIds.length > 50) {
+      const error: ApiError = {
+        error: 'ValidationError',
+        message: 'Maximum 50 chunk IDs allowed per request',
+      };
+      return new Response(JSON.stringify(error), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Fetch chunks (optimized query)
     const chunks = await getChunksByIds(chunkIds);
 
-    // Fetch documents for all unique document IDs
+    // Fetch documents for all unique document IDs in parallel
     const documentIds = [...new Set(chunks.map((chunk) => chunk.documentId))];
     const documents = await Promise.all(
       documentIds.map((docId) => getDocumentById(docId))

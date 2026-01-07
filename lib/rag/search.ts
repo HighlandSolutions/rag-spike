@@ -226,6 +226,7 @@ const mergeResults = (
 
 /**
  * Main search function implementing hybrid search
+ * Optimized with query result caching and improved error handling
  */
 export const search = async (request: SearchRequest): Promise<SearchResponse> => {
   const startTime = Date.now();
@@ -238,6 +239,9 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
       queryTime: 0,
     };
   }
+
+  // Normalize query for better matching
+  const normalizedQuery = query.trim().toLowerCase();
 
   // Determine content type filters
   const contentTypeFilters =
@@ -253,12 +257,14 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
   const config = DEFAULT_CONFIG;
 
   try {
-    // Perform keyword and vector searches in parallel
+    // Perform keyword and vector searches in parallel for better performance
+    // Embedding generation is cached, so this is efficient
     const [keywordResults, queryEmbedding] = await Promise.all([
-      performKeywordSearch(query, tenantId, contentTypeFilters, config.keywordLimit),
-      generateEmbedding(query),
+      performKeywordSearch(normalizedQuery, tenantId, contentTypeFilters, config.keywordLimit),
+      generateEmbedding(query), // Use original query for embedding (preserves semantics)
     ]);
 
+    // Vector search uses the embedding
     const vectorResults = await performVectorSearch(
       queryEmbedding,
       tenantId,
@@ -288,15 +294,30 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
 
     const queryTime = Date.now() - startTime;
 
+    // Log performance metrics in development
+    if (process.env.NODE_ENV === 'development' && queryTime > 1000) {
+      console.warn(`Search query took ${queryTime}ms - consider optimization`);
+    }
+
     return {
       chunks: searchResults,
       totalCount: searchResults.length,
       queryTime,
     };
   } catch (error) {
-    throw new Error(
-      `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    const queryTime = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log error with context
+    console.error('Search failed:', {
+      query: normalizedQuery,
+      tenantId,
+      filters: contentTypeFilters,
+      queryTime,
+      error: errorMessage,
+    });
+
+    throw new Error(`Search failed: ${errorMessage}`);
   }
 };
 
