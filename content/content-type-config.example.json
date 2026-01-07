@@ -1,0 +1,22 @@
+{
+  "defaultContentType": "all",
+  "fileExtensionMap": {
+    ".pdf": "policies",
+    ".csv": "learning_content"
+  },
+  "rules": [
+    {
+      "pattern": "policy",
+      "contentType": "policies"
+    },
+    {
+      "pattern": "learning|training|course",
+      "contentType": "learning_content"
+    },
+    {
+      "pattern": "role|job|position",
+      "contentType": "internal_roles"
+    }
+  ]
+}
+

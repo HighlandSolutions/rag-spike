@@ -111,44 +111,44 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 2: Document Ingestion Pipeline (CLI)
 
 ### File Reading
-- [ ] Create `/content` directory structure
-- [ ] Implement file discovery (scan directory for .pdf, .csv files)
-- [ ] Add file validation (size limits, type checking)
+- [x] Create `/content` directory structure
+- [x] Implement file discovery (scan directory for .pdf, .csv files)
+- [x] Add file validation (size limits, type checking)
 
 ### PDF Parsing
-- [ ] Implement PDF text extraction (per page)
-- [ ] Handle PDF parsing errors gracefully
-- [ ] Extract metadata (page numbers, document name)
+- [x] Implement PDF text extraction (per page)
+- [x] Handle PDF parsing errors gracefully
+- [x] Extract metadata (page numbers, document name)
 
 ### CSV Parsing
-- [ ] Implement CSV parsing (per row/record)
-- [ ] Handle CSV parsing errors gracefully
-- [ ] Extract metadata (row index, column names, file name)
+- [x] Implement CSV parsing (per row/record)
+- [x] Handle CSV parsing errors gracefully
+- [x] Extract metadata (row index, column names, file name)
 
 ### Chunking Logic
-- [ ] Implement text chunking algorithm (~500-1000 tokens with 50-100 overlap)
-- [ ] Create token counting utility (approximate with character count)
-- [ ] Normalize chunks into `DocumentChunk` format
-- [ ] Preserve metadata (page/row, source path) in chunks
-- [ ] Assign content_type/category to chunks (based on document type or metadata)
-- [ ] Store tenant_id with chunks (for multi-tenant support)
+- [x] Implement text chunking algorithm (~500-1000 tokens with 50-100 overlap)
+- [x] Create token counting utility (approximate with character count)
+- [x] Normalize chunks into `DocumentChunk` format
+- [x] Preserve metadata (page/row, source path) in chunks
+- [x] Assign content_type/category to chunks (based on document type or metadata)
+- [x] Store tenant_id with chunks (for multi-tenant support)
 
 ### Ingestion CLI Script
-- [ ] Create `npm run ingest` script
-- [ ] Implement main ingestion flow:
-  - [ ] Read files from `/content`
-  - [ ] Parse and chunk documents
-  - [ ] Generate embeddings for each chunk
-  - [ ] Store chunks in Supabase
-- [ ] Add progress logging
-- [ ] Handle errors and partial failures
-- [ ] Add idempotency (skip already-ingested documents)
+- [x] Create `npm run ingest` script
+- [x] Implement main ingestion flow:
+  - [x] Read files from `/content`
+  - [x] Parse and chunk documents
+  - [x] Generate embeddings for each chunk
+  - [x] Store chunks in Supabase
+- [x] Add progress logging
+- [x] Handle errors and partial failures
+- [x] Add idempotency (skip already-ingested documents)
 
 ### Embeddings Integration
-- [ ] Set up embeddings API client
-- [ ] Implement batch embedding generation
-- [ ] Handle API rate limits and retries
-- [ ] Store embeddings as vectors in pgvector column
+- [x] Set up embeddings API client
+- [x] Implement batch embedding generation
+- [x] Handle API rate limits and retries
+- [x] Store embeddings as vectors in pgvector column
 
 ---
 
