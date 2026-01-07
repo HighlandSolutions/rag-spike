@@ -186,6 +186,7 @@ export const getChunksByDocumentId = async (documentId: string): Promise<Documen
 
 /**
  * Get chunks by IDs
+ * Optimized: Only selects needed columns, orders by input array to preserve order
  */
 export const getChunksByIds = async (ids: string[]): Promise<DocumentChunk[]> => {
   if (ids.length === 0) {
@@ -194,13 +195,23 @@ export const getChunksByIds = async (ids: string[]): Promise<DocumentChunk[]> =>
 
   const supabase = getSupabaseServerClient();
 
-  const { data, error } = await supabase.from('chunks').select('*').in('id', ids);
+  // Only select columns we need (exclude embedding for better performance)
+  const { data, error } = await supabase
+    .from('chunks')
+    .select('id, tenant_id, document_id, chunk_text, chunk_metadata, content_type, embedding, created_at')
+    .in('id', ids);
 
   if (error) {
     throw new Error(`Failed to get chunks: ${error.message}`);
   }
 
-  return data ? data.map(rowToChunk) : [];
+  if (!data) {
+    return [];
+  }
+
+  // Preserve order of input IDs
+  const chunkMap = new Map(data.map((row) => [row.id, rowToChunk(row)]));
+  return ids.map((id) => chunkMap.get(id)).filter((chunk): chunk is DocumentChunk => chunk !== undefined);
 };
 
 /**

@@ -11,5 +11,6 @@ export interface ChatMessage {
   timestamp: Date;
   isLoading?: boolean;
   chunkIds?: string[];
+  error?: boolean; // Indicates if this message represents an error state
 }
 

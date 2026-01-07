@@ -92,14 +92,32 @@ export const ChatContainer = ({}: ChatContainerProps = {}) => {
             return newMap;
           });
         }
-      } catch {
+      } catch (error) {
+        // Determine user-friendly error message based on error type
+        let errorMessage = 'Sorry, an error occurred. Please try again.';
+
+        if (error instanceof Error) {
+          if (error.message === 'LLM_API_ERROR' || error.message.includes('LLM')) {
+            errorMessage = 'The AI service is temporarily unavailable. Please try again in a moment.';
+          } else if (error.message.includes('NoRelevantChunks') || error.message.includes('No relevant')) {
+            errorMessage = 'No relevant information found in the knowledge base. Please try rephrasing your question.';
+          } else if (error.message.includes('network') || error.message.includes('fetch') || error.message.includes('Network')) {
+            errorMessage = 'Network connection error. Please check your internet connection and try again.';
+          } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+            errorMessage = 'Too many requests. Please wait a moment and try again.';
+          } else {
+            errorMessage = error.message || errorMessage;
+          }
+        }
+
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessageId
               ? {
                   ...msg,
-                  content: 'Sorry, an error occurred. Please try again.',
+                  content: errorMessage,
                   isLoading: false,
+                  error: true,
                 }
               : msg
           )
@@ -119,22 +137,24 @@ export const ChatContainer = ({}: ChatContainerProps = {}) => {
 
   return (
     <div className="flex h-screen flex-col">
-      <div className="border-b p-4">
+      <header className="border-b p-4" role="banner">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <h1 className="text-2xl font-bold">RAG Q&A Chat</h1>
           <button
             type="button"
             onClick={() => setShowUserContextForm(!showUserContextForm)}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+            aria-label={showUserContextForm ? 'Hide profile form' : 'Show profile form'}
+            aria-expanded={showUserContextForm}
           >
             {showUserContextForm ? 'Hide' : 'Edit'} Profile
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 gap-4 p-4">
-        <div className="flex flex-1 flex-col">
-          <Card className="flex flex-1 flex-col overflow-hidden">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 gap-4 p-2 sm:p-4 transition-all duration-200">
+        <div className="flex flex-1 flex-col min-w-0">
+          <Card className="flex flex-1 flex-col overflow-hidden transition-shadow duration-200 hover:shadow-lg">
             <MessageList messages={messages} citationsMap={citationsMap} />
             <ChatInput
               onSendMessage={handleSendMessage}
@@ -145,14 +165,18 @@ export const ChatContainer = ({}: ChatContainerProps = {}) => {
         </div>
 
         {showUserContextForm && (
-          <div className="w-80">
+          <aside
+            className="w-full sm:w-80 animate-in slide-in-from-right duration-300 md:block"
+            role="complementary"
+            aria-label="User profile settings"
+          >
             <UserContextForm
               onContextChange={handleContextChange}
               initialContext={userContext || undefined}
             />
-          </div>
+          </aside>
         )}
-      </div>
+      </main>
     </div>
   );
 };

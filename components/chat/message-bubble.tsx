@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { parseCitationMarkers } from '@/lib/citations/parser';
-import { SourceCards, type SourceCardData } from './source-cards';
+import { SourceCards } from './source-cards';
+import type { SourceCardData } from './source-card';
 import type { ChatMessage } from '@/types/chat';
 
 interface MessageBubbleProps {
@@ -47,7 +47,6 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
     };
   }, [isUser, citations]);
 
-  const markers = isUser ? [] : parseCitationMarkers(message.content);
   const hasCitations = !isUser && citations.length > 0;
 
   return (
@@ -59,14 +58,16 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
     >
       <div
         className={cn(
-          'max-w-[80%] rounded-lg px-4 py-3',
+          'max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 sm:px-4 sm:py-3 transition-all duration-200',
           isUser
             ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-muted-foreground'
+            : message.error
+              ? 'bg-destructive/10 text-destructive border border-destructive/20'
+              : 'bg-muted text-muted-foreground'
         )}
       >
         {message.isLoading ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="status" aria-label="Loading response">
             <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
             <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
             <div className="h-2 w-2 animate-bounce rounded-full bg-current" />
@@ -74,13 +75,18 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
         ) : (
           <div
             ref={contentRef}
-            className="whitespace-pre-wrap break-words [&_.citation-link]:cursor-pointer [&_.citation-link]:font-semibold [&_.citation-link]:text-primary [&_.citation-link]:underline [&_.citation-link]:decoration-dotted [&_.citation-link]:underline-offset-2 [&_.citation-link]:transition-opacity [&_.citation-link]:hover:opacity-80"
+            className={cn(
+              'whitespace-pre-wrap break-words',
+              !isUser && !message.error && '[&_.citation-link]:cursor-pointer [&_.citation-link]:font-semibold [&_.citation-link]:text-primary [&_.citation-link]:underline [&_.citation-link]:decoration-dotted [&_.citation-link]:underline-offset-2 [&_.citation-link]:transition-opacity [&_.citation-link]:hover:opacity-80'
+            )}
             dangerouslySetInnerHTML={{
-              __html: message.content.replace(
-                /\[(\d+)\]/g,
-                (match, num) =>
-                  `<sup><a href="#citation-${num}" class="citation-link" data-citation="${num}">${match}</a></sup>`
-              ),
+              __html: message.error
+                ? message.content
+                : message.content.replace(
+                    /\[(\d+)\]/g,
+                    (match, num) =>
+                      `<sup><a href="#citation-${num}" class="citation-link" data-citation="${num}" aria-label="Citation ${num}">${match}</a></sup>`
+                  ),
             }}
           />
         )}
