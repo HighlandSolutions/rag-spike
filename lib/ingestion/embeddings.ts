@@ -118,8 +118,9 @@ const getOpenAIClient = (): OpenAI => {
  */
 export const generateEmbeddings = async (
   texts: string[],
-  config: EmbeddingsConfig = DEFAULT_CONFIG
+  config: Partial<EmbeddingsConfig> = {}
 ): Promise<number[][]> => {
+  const finalConfig = { ...DEFAULT_CONFIG, ...config };
   if (texts.length === 0) {
     return [];
   }
@@ -128,16 +129,16 @@ export const generateEmbeddings = async (
   const embeddings: number[][] = [];
 
   // Process in batches to handle rate limits
-  for (let i = 0; i < texts.length; i += config.batchSize) {
-    const batch = texts.slice(i, i + config.batchSize);
+  for (let i = 0; i < texts.length; i += finalConfig.batchSize) {
+    const batch = texts.slice(i, i + finalConfig.batchSize);
     let retries = 0;
     let success = false;
 
-    while (!success && retries < config.maxRetries) {
+    while (!success && retries < finalConfig.maxRetries) {
       try {
         const startTime = Date.now();
         const response = await client.embeddings.create({
-          model: config.model,
+          model: finalConfig.model,
           input: batch,
         });
 
@@ -150,7 +151,7 @@ export const generateEmbeddings = async (
           // text-embedding-3-small pricing: $0.02 per 1M tokens
           const estimatedCost = (totalTokens / 1_000_000) * 0.02;
           logApiUsage('openai', 'embeddings', totalTokens, estimatedCost, {
-            model: config.model,
+            model: finalConfig.model,
             batchSize: batch.length,
             duration: Date.now() - startTime,
           });
@@ -161,20 +162,20 @@ export const generateEmbeddings = async (
         retries++;
         
         logError('Embedding generation failed', error instanceof Error ? error : new Error('Unknown error'), {
-          model: config.model,
+          model: finalConfig.model,
           batchSize: batch.length,
           retry: retries,
-          maxRetries: config.maxRetries,
+          maxRetries: finalConfig.maxRetries,
         });
 
-        if (retries >= config.maxRetries) {
+        if (retries >= finalConfig.maxRetries) {
           throw new Error(
-            `Failed to generate embeddings after ${config.maxRetries} retries: ${error instanceof Error ? error.message : 'Unknown error'}`
+            `Failed to generate embeddings after ${finalConfig.maxRetries} retries: ${error instanceof Error ? error.message : 'Unknown error'}`
           );
         }
 
         // Wait before retrying (exponential backoff)
-        const delay = config.retryDelay * Math.pow(2, retries - 1);
+        const delay = finalConfig.retryDelay * Math.pow(2, retries - 1);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -189,7 +190,7 @@ export const generateEmbeddings = async (
  */
 export const generateEmbedding = async (
   text: string,
-  config: EmbeddingsConfig = DEFAULT_CONFIG
+  config: Partial<EmbeddingsConfig> = {}
 ): Promise<number[]> => {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
 
