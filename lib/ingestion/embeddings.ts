@@ -4,6 +4,7 @@
  */
 
 import OpenAI from 'openai';
+import { logError, logApiUsage } from '@/lib/utils/logger';
 
 /**
  * Embeddings configuration
@@ -134,6 +135,7 @@ export const generateEmbeddings = async (
 
     while (!success && retries < config.maxRetries) {
       try {
+        const startTime = Date.now();
         const response = await client.embeddings.create({
           model: config.model,
           input: batch,
@@ -141,9 +143,29 @@ export const generateEmbeddings = async (
 
         const batchEmbeddings = response.data.map((item) => item.embedding);
         embeddings.push(...batchEmbeddings);
+        
+        // Log API usage for cost monitoring
+        const totalTokens = response.usage?.total_tokens || 0;
+        if (totalTokens > 0) {
+          // text-embedding-3-small pricing: $0.02 per 1M tokens
+          const estimatedCost = (totalTokens / 1_000_000) * 0.02;
+          logApiUsage('openai', 'embeddings', totalTokens, estimatedCost, {
+            model: config.model,
+            batchSize: batch.length,
+            duration: Date.now() - startTime,
+          });
+        }
+        
         success = true;
       } catch (error) {
         retries++;
+        
+        logError('Embedding generation failed', error instanceof Error ? error : new Error('Unknown error'), {
+          model: config.model,
+          batchSize: batch.length,
+          retry: retries,
+          maxRetries: config.maxRetries,
+        });
 
         if (retries >= config.maxRetries) {
           throw new Error(

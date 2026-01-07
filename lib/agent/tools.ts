@@ -22,7 +22,7 @@ export interface Tool {
   name: string;
   description: string;
   execute: (input: ToolInput) => Promise<ToolResult>;
-  shouldExecute: (query: string, userContext?: UserContext) => boolean;
+  shouldExecute: (query: string) => boolean;
 }
 
 /**
@@ -42,7 +42,7 @@ class EligibilityCheckTool implements Tool {
   name = 'eligibility_check';
   description = 'Checks eligibility for programs, benefits, or opportunities based on user role and level';
 
-  shouldExecute(query: string, userContext?: UserContext): boolean {
+  shouldExecute(query: string): boolean {
     const eligibilityKeywords = [
       'eligible',
       'eligibility',
@@ -127,8 +127,8 @@ export const getAvailableTools = (): Tool[] => {
 /**
  * Determine which tools should execute based on query and user context
  */
-export const determineToolsToExecute = (query: string, userContext?: UserContext): Tool[] => {
-  return tools.filter((tool) => tool.shouldExecute(query, userContext));
+export const determineToolsToExecute = (query: string): Tool[] => {
+  return tools.filter((tool) => tool.shouldExecute(query));
 };
 
 /**

@@ -9,7 +9,7 @@ import { determineContentFilters } from '@/lib/agent/content-filters';
 import { determineToolsToExecute, executeTools } from '@/lib/agent/tools';
 import { composePrompt, extractChunkIds } from '@/lib/agent/prompt-builder';
 import { streamLLMResponse } from '@/lib/agent/llm-client';
-import type { ChatRequest, ApiError, UserContext, SearchRequest } from '@/types/domain';
+import type { ChatRequest, ApiError, UserContext, SearchRequest, ContentType } from '@/types/domain';
 
 /**
  * Default tenant ID (for PoC, can be made configurable later)
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       userContext: chatRequest.userContext,
       query: chatRequest.question,
       k: 8, // Default to 8 chunks
-      filters: contentFilters ? { contentType: contentFilters } : undefined,
+      filters: contentFilters ? { contentType: contentFilters as ContentType[] } : undefined,
     };
 
     // Perform RAG search
@@ -72,10 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine which tools to execute
-    const toolsToExecute = determineToolsToExecute(
-      chatRequest.question,
-      chatRequest.userContext
-    );
+    const toolsToExecute = determineToolsToExecute(chatRequest.question);
 
     // Execute tools in parallel
     const toolResults = await executeTools(

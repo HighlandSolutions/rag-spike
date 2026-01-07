@@ -67,10 +67,15 @@ export const createDocument = async (
   const supabase = getSupabaseServerClient();
   const insert = documentToInsert(document);
 
-  const { data, error } = await supabase.from('documents').insert(insert).select().single();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('documents').insert(insert as any).select().single() as unknown as Promise<{ data: DocumentRow | null; error: { message: string } | null }>);
 
   if (error) {
     throw new Error(`Failed to create document: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Failed to create document: No data returned');
   }
 
   return rowToDocument(data);
@@ -120,10 +125,15 @@ export const createChunk = async (chunk: Omit<DocumentChunk, 'id' | 'createdAt'>
   const supabase = getSupabaseServerClient();
   const insert = chunkToInsert(chunk);
 
-  const { data, error } = await supabase.from('chunks').insert(insert).select().single();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('chunks').insert(insert as any).select().single() as unknown as Promise<{ data: ChunkRow | null; error: { message: string } | null }>);
 
   if (error) {
     throw new Error(`Failed to create chunk: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Failed to create chunk: No data returned');
   }
 
   return rowToChunk(data);
@@ -138,7 +148,8 @@ export const createChunks = async (
   const supabase = getSupabaseServerClient();
   const inserts = chunks.map(chunkToInsert);
 
-  const { data, error } = await supabase.from('chunks').insert(inserts).select();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('chunks').insert(inserts as any).select() as unknown as Promise<{ data: ChunkRow[] | null; error: { message: string } | null }>);
 
   if (error) {
     throw new Error(`Failed to create chunks: ${error.message}`);
@@ -210,7 +221,7 @@ export const getChunksByIds = async (ids: string[]): Promise<DocumentChunk[]> =>
   }
 
   // Preserve order of input IDs
-  const chunkMap = new Map(data.map((row) => [row.id, rowToChunk(row)]));
+  const chunkMap = new Map((data as ChunkRow[]).map((row) => [row.id, rowToChunk(row)]));
   return ids.map((id) => chunkMap.get(id)).filter((chunk): chunk is DocumentChunk => chunk !== undefined);
 };
 

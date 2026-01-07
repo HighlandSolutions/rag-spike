@@ -5,6 +5,7 @@
 
 import { getSupabaseServerClient } from '@/lib/supabase/client';
 import { generateEmbedding } from '@/lib/ingestion/embeddings';
+import { logError, logInfo, logApiUsage } from '@/lib/utils/logger';
 import type { SearchRequest, SearchResponse, SearchResult, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ChunkRow } from '@/types/database';
 
@@ -96,12 +97,10 @@ const performKeywordSearch = async (
 
     // Calculate match score
     let matchCount = 0;
-    let totalWords = 0;
 
     for (const word of words) {
       const occurrences = (text.match(new RegExp(word, 'gi')) || []).length;
       matchCount += occurrences;
-      totalWords += 1;
     }
 
     // Score based on: (1) word match ratio, (2) total occurrences
@@ -134,13 +133,14 @@ const performVectorSearch = async (
 
   // Use the match_chunks RPC function for vector similarity search
   // Type assertion needed because custom RPC functions aren't in the generated types
-  const { data, error } = (await supabase.rpc('match_chunks', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = (await (supabase.rpc as any)('match_chunks', {
     query_embedding: embeddingArray,
     match_threshold: 0.0,
     match_count: limit,
     tenant_id_filter: tenantId,
     content_types: contentTypeFilters && contentTypeFilters.length > 0 ? contentTypeFilters : null,
-  } as any)) as { data: MatchChunksResult[] | null; error: { message: string } | null };
+  })) as { data: MatchChunksResult[] | null; error: { message: string } | null };
 
   if (error) {
     throw new Error(`Vector search failed: ${error.message}`);
@@ -197,18 +197,23 @@ const mergeResults = (
     }
   }
 
-  // Calculate hybrid scores and determine match type
+  // Calculate hybrid scores using weighted combination
+  // Default weights: 30% keyword, 70% vector (favor semantic similarity)
+  // This balances exact matches with conceptual relevance
   const mergedResults = Array.from(chunkMap.values()).map((item) => {
+    // Weighted average: combines both scores based on configuration
     const hybridScore =
       item.keywordScore * config.keywordWeight + item.vectorScore * config.vectorWeight;
 
+    // Determine match type for transparency and debugging
+    // Hybrid matches (appearing in both) are typically the most relevant
     let matchType: 'keyword' | 'vector' | 'hybrid';
     if (item.keywordScore > 0 && item.vectorScore > 0) {
-      matchType = 'hybrid';
+      matchType = 'hybrid'; // Best: appears in both keyword and vector results
     } else if (item.keywordScore > 0) {
-      matchType = 'keyword';
+      matchType = 'keyword'; // Only found via keyword search
     } else {
-      matchType = 'vector';
+      matchType = 'vector'; // Only found via vector search
     }
 
     return {
@@ -218,7 +223,7 @@ const mergeResults = (
     };
   });
 
-  // Sort by hybrid score descending
+  // Sort by hybrid score descending (highest relevance first)
   mergedResults.sort((a, b) => b.score - a.score);
 
   return mergedResults;
@@ -309,12 +314,11 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     // Log error with context
-    console.error('Search failed:', {
+    logError('Search failed', error instanceof Error ? error : new Error(errorMessage), {
       query: normalizedQuery,
       tenantId,
       filters: contentTypeFilters,
       queryTime,
-      error: errorMessage,
     });
 
     throw new Error(`Search failed: ${errorMessage}`);

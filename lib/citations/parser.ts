@@ -40,8 +40,7 @@ export const parseCitationMarkers = (text: string): CitationMarker[] => {
  */
 export const replaceCitationMarkers = (
   text: string,
-  markers: CitationMarker[],
-  onCitationClick: (citationNumber: number) => void
+  markers: CitationMarker[]
 ): string => {
   if (markers.length === 0) {
     return text;

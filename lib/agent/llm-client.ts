@@ -4,6 +4,7 @@
  */
 
 import OpenAI from 'openai';
+import { logError, logApiUsage } from '@/lib/utils/logger';
 import type { ChatResponseChunk } from '@/types/domain';
 
 /**
@@ -61,6 +62,8 @@ export const streamLLMResponse = async function* (
   }
 
   const client = getOpenAIClient();
+  const startTime = Date.now();
+  let totalTokens = 0;
 
   try {
     const stream = await client.chat.completions.create({
@@ -93,6 +96,11 @@ export const streamLLMResponse = async function* (
     // Problem 4: Process all chunks from the stream
     for await (const chunk of stream) {
       const content = chunk.choices?.[0]?.delta?.content || '';
+      
+      // Track token usage if available
+      if (chunk.usage) {
+        totalTokens = (chunk.usage.prompt_tokens || 0) + (chunk.usage.completion_tokens || 0);
+      }
 
       if (content) {
         yield {
@@ -100,6 +108,18 @@ export const streamLLMResponse = async function* (
           isComplete: false,
         };
       }
+    }
+
+    // Log API usage for cost monitoring
+    const duration = Date.now() - startTime;
+    if (totalTokens > 0) {
+      // Estimate cost: GPT-4o-mini pricing (as of 2024): $0.15/$0.60 per 1M tokens (input/output)
+      // Using average of $0.30 per 1M tokens for simplicity
+      const estimatedCost = (totalTokens / 1_000_000) * 0.30;
+      logApiUsage('openai', 'chat_completion', totalTokens, estimatedCost, {
+        model: finalConfig.model,
+        duration,
+      });
     }
 
     // Send final completion signal
@@ -113,6 +133,11 @@ export const streamLLMResponse = async function* (
     const errorDetails = error instanceof Error && 'status' in error 
       ? ` (Status: ${(error as { status?: number }).status})` 
       : '';
+    
+    logError('LLM streaming error', error instanceof Error ? error : new Error(errorMessage), {
+      model: finalConfig.model,
+      duration: Date.now() - startTime,
+    });
     
     yield {
       text: '',
