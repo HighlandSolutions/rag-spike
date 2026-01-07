@@ -1,0 +1,203 @@
+/**
+ * Embeddings API client
+ * Provides embedding generation with caching support
+ */
+
+import OpenAI from 'openai';
+
+/**
+ * Embeddings configuration
+ */
+export interface EmbeddingsConfig {
+  model: string;
+  batchSize: number;
+  maxRetries: number;
+  retryDelay: number; // milliseconds
+  enableCache?: boolean; // Enable caching for query embeddings
+  cacheMaxSize?: number; // Maximum cache size (default: 1000)
+  cacheTTL?: number; // Cache TTL in milliseconds (default: 1 hour)
+}
+
+/**
+ * Cache entry for embeddings
+ */
+interface CacheEntry {
+  embedding: number[];
+  timestamp: number;
+}
+
+/**
+ * In-memory cache for embeddings
+ */
+const embeddingCache = new Map<string, CacheEntry>();
+
+/**
+ * Default embeddings configuration
+ */
+const DEFAULT_CONFIG: EmbeddingsConfig = {
+  model: process.env.OPENAI_EMBEDDINGS_MODEL || 'text-embedding-3-small',
+  batchSize: 100, // Process in batches to handle rate limits
+  maxRetries: 3,
+  retryDelay: 1000,
+  enableCache: true,
+  cacheMaxSize: 1000,
+  cacheTTL: 60 * 60 * 1000, // 1 hour
+};
+
+/**
+ * Generate cache key from text and model
+ */
+const getCacheKey = (text: string, model: string): string => {
+  return `${model}:${text}`;
+};
+
+/**
+ * Get embedding from cache if available and not expired
+ */
+const getCachedEmbedding = (text: string, model: string, ttl: number): number[] | null => {
+  const key = getCacheKey(text, model);
+  const entry = embeddingCache.get(key);
+
+  if (!entry) {
+    return null;
+  }
+
+  const now = Date.now();
+  if (now - entry.timestamp > ttl) {
+    embeddingCache.delete(key);
+    return null;
+  }
+
+  return entry.embedding;
+};
+
+/**
+ * Store embedding in cache
+ */
+const setCachedEmbedding = (text: string, model: string, embedding: number[], maxSize: number): void => {
+  // Evict oldest entries if cache is full
+  if (embeddingCache.size >= maxSize) {
+    const firstKey = embeddingCache.keys().next().value;
+    if (firstKey) {
+      embeddingCache.delete(firstKey);
+    }
+  }
+
+  const key = getCacheKey(text, model);
+  embeddingCache.set(key, {
+    embedding,
+    timestamp: Date.now(),
+  });
+};
+
+/**
+ * Clear the embedding cache
+ */
+export const clearEmbeddingCache = (): void => {
+  embeddingCache.clear();
+};
+
+/**
+ * Initialize OpenAI client
+ */
+const getOpenAIClient = (): OpenAI => {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+
+  return new OpenAI({
+    apiKey,
+  });
+};
+
+/**
+ * Generate embeddings for a batch of texts
+ */
+export const generateEmbeddings = async (
+  texts: string[],
+  config: EmbeddingsConfig = DEFAULT_CONFIG
+): Promise<number[][]> => {
+  if (texts.length === 0) {
+    return [];
+  }
+
+  const client = getOpenAIClient();
+  const embeddings: number[][] = [];
+
+  // Process in batches to handle rate limits
+  for (let i = 0; i < texts.length; i += config.batchSize) {
+    const batch = texts.slice(i, i + config.batchSize);
+    let retries = 0;
+    let success = false;
+
+    while (!success && retries < config.maxRetries) {
+      try {
+        const response = await client.embeddings.create({
+          model: config.model,
+          input: batch,
+        });
+
+        const batchEmbeddings = response.data.map((item) => item.embedding);
+        embeddings.push(...batchEmbeddings);
+        success = true;
+      } catch (error) {
+        retries++;
+
+        if (retries >= config.maxRetries) {
+          throw new Error(
+            `Failed to generate embeddings after ${config.maxRetries} retries: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        }
+
+        // Wait before retrying (exponential backoff)
+        const delay = config.retryDelay * Math.pow(2, retries - 1);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  return embeddings;
+};
+
+/**
+ * Generate embedding for a single text
+ * Uses cache if enabled to avoid redundant API calls
+ */
+export const generateEmbedding = async (
+  text: string,
+  config: EmbeddingsConfig = DEFAULT_CONFIG
+): Promise<number[]> => {
+  const finalConfig = { ...DEFAULT_CONFIG, ...config };
+
+  // Check cache if enabled
+  if (finalConfig.enableCache) {
+    const cached = getCachedEmbedding(
+      text,
+      finalConfig.model,
+      finalConfig.cacheTTL || 60 * 60 * 1000
+    );
+
+    if (cached) {
+      return cached;
+    }
+  }
+
+  // Generate embedding
+  const embeddings = await generateEmbeddings([text], finalConfig);
+  const embedding = embeddings[0] || [];
+
+  // Store in cache if enabled
+  if (finalConfig.enableCache && embedding.length > 0) {
+    setCachedEmbedding(
+      text,
+      finalConfig.model,
+      embedding,
+      finalConfig.cacheMaxSize || 1000
+    );
+  }
+
+  return embedding;
+};
+
