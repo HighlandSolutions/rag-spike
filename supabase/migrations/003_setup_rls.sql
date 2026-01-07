@@ -20,3 +20,5 @@ CREATE POLICY "Allow all operations on chunks" ON chunks
   USING (true)
   WITH CHECK (true);
 
+
+

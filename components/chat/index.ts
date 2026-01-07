@@ -8,5 +8,7 @@ export { MessageBubble } from './message-bubble';
 export { ChatInput } from './chat-input';
 export { UserContextForm } from './user-context-form';
 export { SourceCard, type SourceCardData } from './source-card';
+export { CitationTooltip } from './citation-tooltip';
+export { TooltipProvider } from './tooltip-provider';
 export { SourceCards } from './source-cards';
 

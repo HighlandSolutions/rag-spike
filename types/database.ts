@@ -16,6 +16,16 @@ export interface Database {
         Insert: ChunkInsert;
         Update: ChunkUpdate;
       };
+      chat_sessions: {
+        Row: ChatSessionRow;
+        Insert: ChatSessionInsert;
+        Update: ChatSessionUpdate;
+      };
+      chat_messages: {
+        Row: ChatMessageRow;
+        Insert: ChatMessageInsert;
+        Update: ChatMessageUpdate;
+      };
     };
   };
 }
@@ -100,5 +110,78 @@ export interface ChunkUpdate {
   chunk_metadata?: Record<string, unknown>;
   content_type?: string;
   embedding?: number[] | null;
+}
+
+/**
+ * Chat session table row type
+ */
+export interface ChatSessionRow {
+  id: string;
+  tenant_id: string;
+  title: string | null;
+  user_context: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Chat session insert type (for creating new sessions)
+ */
+export interface ChatSessionInsert {
+  id?: string;
+  tenant_id?: string;
+  title?: string | null;
+  user_context?: Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Chat session update type (for updating existing sessions)
+ */
+export interface ChatSessionUpdate {
+  id?: string;
+  tenant_id?: string;
+  title?: string | null;
+  user_context?: Record<string, unknown> | null;
+  updated_at?: string;
+}
+
+/**
+ * Chat message table row type
+ */
+export interface ChatMessageRow {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  chunk_ids: string[] | null;
+  error: boolean;
+  created_at: string;
+}
+
+/**
+ * Chat message insert type (for creating new messages)
+ */
+export interface ChatMessageInsert {
+  id?: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  chunk_ids?: string[] | null;
+  error?: boolean;
+  created_at?: string;
+}
+
+/**
+ * Chat message update type (for updating existing messages)
+ */
+export interface ChatMessageUpdate {
+  id?: string;
+  session_id?: string;
+  role?: 'user' | 'assistant';
+  content?: string;
+  chunk_ids?: string[] | null;
+  error?: boolean;
 }
 

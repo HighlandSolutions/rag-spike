@@ -3,6 +3,7 @@
  */
 
 import type { ChunkMetadata } from '@/types/domain';
+import { semanticChunkText, semanticChunkMultipleTexts, type SemanticChunkingConfig } from './semantic-chunking';
 
 /**
  * Chunking configuration
@@ -10,6 +11,8 @@ import type { ChunkMetadata } from '@/types/domain';
 export interface ChunkingConfig {
   chunkSize: number; // Target chunk size in characters (approximate tokens)
   overlap: number; // Overlap size in characters
+  useSemanticChunking?: boolean; // Enable semantic chunking (default: false)
+  semanticConfig?: Partial<SemanticChunkingConfig>; // Semantic chunking configuration
 }
 
 /**
@@ -40,12 +43,26 @@ export const estimateTokenCount = (text: string): number => {
 
 /**
  * Chunk text into smaller pieces with overlap
+ * Uses semantic chunking if enabled, otherwise falls back to fixed-size chunking
  */
-export const chunkText = (
+export const chunkText = async (
   text: string,
   metadata: ChunkMetadata,
   config: ChunkingConfig = DEFAULT_CONFIG
-): TextChunk[] => {
+): Promise<TextChunk[]> => {
+  // Use semantic chunking if enabled
+  if (config.useSemanticChunking) {
+    const semanticConfig: Partial<SemanticChunkingConfig> = {
+      targetChunkSize: config.chunkSize,
+      minChunkSize: Math.floor(config.chunkSize * 0.25),
+      maxChunkSize: Math.floor(config.chunkSize * 2),
+      overlap: config.overlap,
+      ...config.semanticConfig,
+    };
+    return semanticChunkText(text, metadata, semanticConfig);
+  }
+
+  // Fallback to fixed-size chunking
   if (!text.trim()) {
     return [];
   }
@@ -99,16 +116,30 @@ export const chunkText = (
 
 /**
  * Chunk multiple text pieces (e.g., pages or rows)
+ * Uses semantic chunking if enabled, otherwise falls back to fixed-size chunking
  */
-export const chunkMultipleTexts = (
+export const chunkMultipleTexts = async (
   texts: Array<{ text: string; metadata: ChunkMetadata }>,
   config: ChunkingConfig = DEFAULT_CONFIG
-): TextChunk[] => {
+): Promise<TextChunk[]> => {
+  // Use semantic chunking if enabled
+  if (config.useSemanticChunking) {
+    const semanticConfig: Partial<SemanticChunkingConfig> = {
+      targetChunkSize: config.chunkSize,
+      minChunkSize: Math.floor(config.chunkSize * 0.25),
+      maxChunkSize: Math.floor(config.chunkSize * 2),
+      overlap: config.overlap,
+      ...config.semanticConfig,
+    };
+    return semanticChunkMultipleTexts(texts, semanticConfig);
+  }
+
+  // Fallback to fixed-size chunking
   const allChunks: TextChunk[] = [];
   let globalChunkIndex = 0;
 
   for (const item of texts) {
-    const chunks = chunkText(item.text, item.metadata, config);
+    const chunks = await chunkText(item.text, item.metadata, config);
 
     for (const chunk of chunks) {
       allChunks.push({

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { search } from '@/lib/rag/search';
 import type { SearchRequest, ApiError } from '@/types/domain';
+import type { QueryProcessingConfig } from '@/lib/rag/query-processing';
 
 /**
  * POST /api/rag/search
@@ -41,8 +42,22 @@ export async function POST(request: NextRequest) {
       filters: body.filters,
     };
 
-    // Perform search
-    const searchResponse = await search(searchRequest);
+    // Query processing configuration (can be customized via env vars or request body)
+    const queryProcessingConfig: Partial<QueryProcessingConfig> = {
+      enabled: process.env.ENABLE_QUERY_PROCESSING === 'true',
+      enableExpansion: process.env.ENABLE_QUERY_EXPANSION === 'true',
+      enableRewriting: process.env.ENABLE_QUERY_REWRITING === 'true',
+      enableUnderstanding: process.env.ENABLE_QUERY_UNDERSTANDING === 'true',
+      ...(body.query_processing_config as Partial<QueryProcessingConfig> | undefined),
+    };
+
+    // Perform search with query processing
+    const searchResponse = await search(
+      searchRequest,
+      undefined, // rerankingConfig (uses defaults)
+      queryProcessingConfig,
+      undefined // conversationHistory (not available in direct search API)
+    );
 
     return NextResponse.json(searchResponse, { status: 200 });
   } catch (error) {
