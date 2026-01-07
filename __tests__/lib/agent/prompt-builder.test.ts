@@ -76,8 +76,13 @@ describe('prompt-builder', () => {
     });
 
     it('should include chunk metadata in prompt', () => {
+      const chunk = createMockChunk('chunk1', 'Content', 'policies');
       const searchResults: SearchResult[] = [
-        createMockSearchResult('chunk1', 'Content', 'policies'),
+        {
+          chunk,
+          score: 0.8,
+          matchType: 'hybrid',
+        },
       ];
 
       const prompt = composePrompt('Test question', searchResults);

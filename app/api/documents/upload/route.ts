@@ -8,7 +8,7 @@ import { chunkMultipleTexts } from '@/lib/ingestion/chunking';
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, createChunks, getDocumentsByTenant } from '@/lib/supabase/queries';
 import { getContentType } from '@/lib/ingestion/content-type-config';
-import type { Document, DocumentChunk } from '@/types/domain';
+import type { Document, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ApiError } from '@/types/domain';
 
 /**
@@ -50,12 +50,12 @@ const processFileBuffer = async (
     throw new Error(`Document "${fileName}" already exists`);
   }
 
-  let parsedData: { pages?: Array<{ text: string; metadata: unknown }>; rows?: Array<{ text: string; metadata: unknown }> };
+  let parsedData: { pages?: Array<{ text: string; metadata: ChunkMetadata }>; rows?: Array<{ text: string; metadata: ChunkMetadata }> };
 
   if (extension === '.pdf') {
     // Parse PDF from buffer
     // pdfjs-dist can work with ArrayBuffer, so we convert Buffer to ArrayBuffer
-    const arrayBuffer = fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength);
+    const arrayBuffer = fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength) as ArrayBuffer;
     
     // Use pdfjs-dist directly since we have the buffer
     const pdfjsLib = await import('pdfjs-dist');
@@ -70,7 +70,7 @@ const processFileBuffer = async (
 
     const pdfDocument = await loadingTask.promise;
     const totalPages = pdfDocument.numPages;
-    const pages: Array<{ text: string; metadata: unknown }> = [];
+    const pages: Array<{ text: string; metadata: ChunkMetadata }> = [];
 
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
       const page = await pdfDocument.getPage(pageNum);
@@ -88,7 +88,7 @@ const processFileBuffer = async (
             pageNumber: pageNum,
             fileName,
             sourceLocation: `uploaded/${fileName}`,
-          },
+          } as ChunkMetadata,
         });
       }
     }
@@ -119,7 +119,7 @@ const processFileBuffer = async (
           columnNames,
           fileName,
           sourceLocation: `uploaded/${fileName}`,
-        },
+        } as ChunkMetadata,
       })),
     };
   }
