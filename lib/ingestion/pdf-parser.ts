@@ -53,7 +53,7 @@ export const parsePdf = async (filePath: string, fileName: string): Promise<Pars
 
       // Extract text from text items
       const pageText = textContent.items
-        .map((item: { str?: string }) => item.str || '')
+        .map((item) => ('str' in item ? item.str : ''))
         .join(' ')
         .trim();
 
