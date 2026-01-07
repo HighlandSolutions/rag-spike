@@ -394,7 +394,7 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [x] Verify all environment variables are set
 
 ### Deployment
-- [ ] Deploy to Vercel (ready for deployment)
+- [X] Deploy to Vercel (ready for deployment)
 - [ ] Verify deployment works
 - [ ] Test production environment
 - [ ] Set up custom domain (skipped per user request)
