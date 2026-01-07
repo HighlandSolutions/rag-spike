@@ -16,7 +16,8 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!contentRef.current || isUser || citations.length === 0) {
+    const contentElement = contentRef.current;
+    if (!contentElement || isUser || citations.length === 0) {
       return;
     }
 
@@ -41,9 +42,9 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
       }
     };
 
-    contentRef.current.addEventListener('click', handleCitationClick);
+    contentElement.addEventListener('click', handleCitationClick);
     return () => {
-      contentRef.current?.removeEventListener('click', handleCitationClick);
+      contentElement.removeEventListener('click', handleCitationClick);
     };
   }, [isUser, citations]);
 
