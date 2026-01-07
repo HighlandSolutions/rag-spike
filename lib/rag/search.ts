@@ -9,6 +9,11 @@ import type { SearchRequest, SearchResponse, SearchResult, DocumentChunk, ChunkM
 import type { ChunkRow } from '@/types/database';
 
 /**
+ * Type for match_chunks RPC function return value
+ */
+type MatchChunksResult = ChunkRow & { similarity: number };
+
+/**
  * Convert database row to domain DocumentChunk
  */
 const rowToChunk = (row: ChunkRow): DocumentChunk => ({
@@ -128,13 +133,14 @@ const performVectorSearch = async (
   const embeddingArray = queryEmbedding;
 
   // Use the match_chunks RPC function for vector similarity search
-  const { data, error } = await supabase.rpc('match_chunks', {
+  // Type assertion needed because custom RPC functions aren't in the generated types
+  const { data, error } = (await supabase.rpc('match_chunks', {
     query_embedding: embeddingArray,
     match_threshold: 0.0,
     match_count: limit,
     tenant_id_filter: tenantId,
     content_types: contentTypeFilters && contentTypeFilters.length > 0 ? contentTypeFilters : null,
-  });
+  } as any)) as { data: MatchChunksResult[] | null; error: { message: string } | null };
 
   if (error) {
     throw new Error(`Vector search failed: ${error.message}`);
@@ -144,7 +150,7 @@ const performVectorSearch = async (
     return [];
   }
 
-  return data.map((row: ChunkRow & { similarity: number }) => {
+  return data.map((row: MatchChunksResult) => {
     const chunk = rowToChunk(row);
     // Cosine similarity: 1 - distance (distance is 0-2, similarity is 0-1)
     // Ensure score is between 0 and 1

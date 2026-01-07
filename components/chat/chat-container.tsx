@@ -9,16 +9,13 @@ import type { ChatMessage } from '@/types/chat';
 import type { UserContext } from '@/types/domain';
 import { loadUserContext } from '@/lib/storage';
 import { updateMessageWithStream, completeStreamingMessage } from '@/lib/streaming';
+import { callAgentAPI } from '@/lib/agent/api-client';
 
 interface ChatContainerProps {
-  onSendMessage?: (
-    message: string,
-    userContext?: UserContext,
-    onStreamChunk?: (chunk: string) => void
-  ) => Promise<void>;
+  // No props needed - component handles API calls directly
 }
 
-export const ChatContainer = ({ onSendMessage }: ChatContainerProps) => {
+export const ChatContainer = ({}: ChatContainerProps = {}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
@@ -67,30 +64,20 @@ export const ChatContainer = ({ onSendMessage }: ChatContainerProps) => {
       };
 
       try {
-        if (onSendMessage) {
-          await onSendMessage(content, userContext || undefined, handleStreamChunk);
-          // Mark streaming as complete
-          setMessages((prev) => {
-            if (streamingMessageIdRef.current) {
-              return completeStreamingMessage(prev, streamingMessageIdRef.current, prev.find((m) => m.id === streamingMessageIdRef.current)?.content || '');
-            }
-            return prev;
-          });
-        } else {
-          // Mock streaming response for now (until API is ready)
-          const mockResponse = 'This is a placeholder response. The API endpoint will be implemented in Phase 4.';
-          const words = mockResponse.split(' ');
-          for (let i = 0; i < words.length; i++) {
-            await new Promise((resolve) => setTimeout(resolve, 50));
-            handleStreamChunk(words[i] + (i < words.length - 1 ? ' ' : ''));
+        // Call agent API with streaming
+        const result = await callAgentAPI(content, userContext || undefined, handleStreamChunk);
+
+        // Mark streaming as complete with final answer
+        setMessages((prev) => {
+          if (streamingMessageIdRef.current) {
+            return completeStreamingMessage(
+              prev,
+              streamingMessageIdRef.current,
+              result.answer || prev.find((m) => m.id === streamingMessageIdRef.current)?.content || ''
+            );
           }
-          setMessages((prev) => {
-            if (streamingMessageIdRef.current) {
-              return completeStreamingMessage(prev, streamingMessageIdRef.current, mockResponse);
-            }
-            return prev;
-          });
-        }
+          return prev;
+        });
       } catch {
         setMessages((prev) =>
           prev.map((msg) =>
@@ -108,7 +95,7 @@ export const ChatContainer = ({ onSendMessage }: ChatContainerProps) => {
         streamingMessageIdRef.current = null;
       }
     },
-    [onSendMessage, userContext]
+    [userContext]
   );
 
   const handleContextChange = useCallback((context: UserContext) => {
