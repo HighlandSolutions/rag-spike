@@ -343,20 +343,20 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 8: Testing
 
 ### Unit Tests
-- [ ] Test chunking logic
-- [ ] Test PDF parsing
-- [ ] Test CSV parsing
-- [ ] Test embedding generation
-- [ ] Test keyword search (full-text search)
-- [ ] Test vector search queries
-- [ ] Test hybrid search (keyword + vector combination)
-- [ ] Test content filtering logic
-- [ ] Test prompt construction (with user context)
-- [ ] Test tool integration
-- [ ] Test RAG search API
-- [ ] Test agent/orchestrator service
-- [ ] Test API route handlers
-- [ ] Test utility functions
+- [x] Test chunking logic
+- [x] Test PDF parsing
+- [x] Test CSV parsing
+- [x] Test embedding generation
+- [x] Test keyword search (full-text search)
+- [x] Test vector search queries
+- [x] Test hybrid search (keyword + vector combination)
+- [x] Test content filtering logic
+- [x] Test prompt construction (with user context)
+- [x] Test tool integration
+- [x] Test RAG search API
+- [x] Test agent/orchestrator service
+- [x] Test API route handlers
+- [x] Test utility functions
 
 ### Integration Tests
 - [ ] Test full ingestion pipeline

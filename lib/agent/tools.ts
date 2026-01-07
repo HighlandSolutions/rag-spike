@@ -135,7 +135,16 @@ export const determineToolsToExecute = (query: string, userContext?: UserContext
  * Execute a tool
  */
 export const executeTool = async (tool: Tool, input: ToolInput): Promise<ToolResult> => {
-  return tool.execute(input);
+  try {
+    return await tool.execute(input);
+  } catch (error) {
+    return {
+      toolName: tool.name,
+      output: null,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 };
 
 /**
