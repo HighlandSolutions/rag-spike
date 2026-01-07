@@ -56,7 +56,7 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 
 ### Infrastructure Accounts
 - [x] Set up GitHub repository
-- [ ] Configure Vercel project (connect to GitHub) - User will set up
+- [x] Configure Vercel project (connect to GitHub) - User will set up
 - [ ] Set up Sentry project and integration - User will set up later
 - [ ] Configure environment variables in Vercel
 
@@ -77,34 +77,34 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 1: Database Schema & Core Types
 
 ### Database Schema
-- [ ] Design `documents` table (id, tenant_id, source_path, name, content_type, uploaded_at, etc.)
-- [ ] Design `chunks` table (id, tenant_id, document_id, chunk_text, chunk_metadata, content_type, embedding vector, created_at)
-- [ ] Create migration for documents table
-- [ ] Create migration for chunks table with pgvector column
-- [ ] Create indexes on chunks:
-  - [ ] document_id index
-  - [ ] embedding vector similarity search index
-  - [ ] content_type index (for filtering)
-  - [ ] tenant_id index (for multi-tenant support)
-  - [ ] Full-text search index (for keyword search)
-- [ ] Set up Row Level Security (RLS) policies (basic for PoC, tenant-aware if needed)
-- [ ] Test database connection from Next.js
+- [x] Design `documents` table (id, tenant_id, source_path, name, content_type, uploaded_at, etc.)
+- [x] Design `chunks` table (id, tenant_id, document_id, chunk_text, chunk_metadata, content_type, embedding vector, created_at)
+- [x] Create migration for documents table
+- [x] Create migration for chunks table with pgvector column
+- [x] Create indexes on chunks:
+  - [x] document_id index
+  - [x] embedding vector similarity search index
+  - [x] content_type index (for filtering)
+  - [x] tenant_id index (for multi-tenant support)
+  - [x] Full-text search index (for keyword search)
+- [x] Set up Row Level Security (RLS) policies (basic for PoC, tenant-aware if needed)
+- [x] Test database connection from Next.js
 
 ### TypeScript Types
-- [ ] Define `Document` type
-- [ ] Define `DocumentChunk` type
-- [ ] Define `ChunkMetadata` type
-- [ ] Define `UserContext` type (role, level, target_job, learning_preferences)
-- [ ] Define `SearchRequest` type (tenant_id, user_context, query, k, filters)
-- [ ] Define `SearchResponse` type (chunks, scores)
-- [ ] Define `ChatRequest` type (question, user_context, metadata)
-- [ ] Define API request/response types
-- [ ] Define database schema types (generate from Supabase or manual)
+- [x] Define `Document` type
+- [x] Define `DocumentChunk` type
+- [x] Define `ChunkMetadata` type
+- [x] Define `UserContext` type (role, level, target_job, learning_preferences)
+- [x] Define `SearchRequest` type (tenant_id, user_context, query, k, filters)
+- [x] Define `SearchResponse` type (chunks, scores)
+- [x] Define `ChatRequest` type (question, user_context, metadata)
+- [x] Define API request/response types
+- [x] Define database schema types (generate from Supabase or manual)
 
 ### Core Utilities
-- [ ] Create Supabase client utility
-- [ ] Create database query helpers
-- [ ] Create type guards and validators
+- [x] Create Supabase client utility
+- [x] Create database query helpers
+- [x] Create type guards and validators
 
 ---
 
