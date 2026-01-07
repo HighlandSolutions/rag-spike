@@ -81,7 +81,8 @@ export const ChatContainer = () => {
     };
 
     initializeSession();
-  }, []); // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount - userContext is intentionally excluded to avoid re-initialization
 
   // Load chat sessions list
   useEffect(() => {

@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
       user_context: (body.user_context as UserContext | undefined) || null,
     };
 
-    const { data, error } = await supabase
-      .from('chat_sessions')
-      .insert(sessionData)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('chat_sessions') as any)
+      .insert([sessionData])
       .select()
       .single();
 

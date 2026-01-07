@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
   const [error, setError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -49,11 +49,11 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     fetchDocuments();
-  }, [tenantId]);
+  }, [fetchDocuments]);
 
   const handleDelete = async (documentId: string) => {
     if (!confirm('Are you sure you want to delete this document? This will also delete all associated chunks.')) {

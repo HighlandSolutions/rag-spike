@@ -28,8 +28,8 @@ export async function PATCH(
       updateData.user_context = body.user_context;
     }
 
-    const { data, error } = await supabase
-      .from('chat_sessions')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('chat_sessions') as any)
       .update(updateData)
       .eq('id', id)
       .select()

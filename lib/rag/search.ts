@@ -5,7 +5,7 @@
 
 import { getSupabaseServerClient } from '@/lib/supabase/client';
 import { generateEmbedding } from '@/lib/ingestion/embeddings';
-import { logError, logInfo, logApiUsage } from '@/lib/utils/logger';
+import { logError } from '@/lib/utils/logger';
 import type { SearchRequest, SearchResponse, SearchResult, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ChunkRow } from '@/types/database';
 
