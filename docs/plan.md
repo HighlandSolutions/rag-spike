@@ -186,39 +186,39 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 4: RAG Search API & Hybrid Search
 
 ### RAG Search API (`/api/rag/search`)
-- [ ] Create RAG search API endpoint
-- [ ] Implement `search(tenant_id, user_context, query, k, filters)` function signature
-- [ ] Accept search parameters:
-  - [ ] tenant_id (for multi-tenant support)
-  - [ ] user_context (role, level, target_job, learning_preferences)
-  - [ ] query (user question)
-  - [ ] k (number of results, default 8)
-  - [ ] filters (content_type filters: "policies", "learning_content", "internal_roles", etc.)
-- [ ] Return search results with chunks and scores
+- [x] Create RAG search API endpoint
+- [x] Implement `search(tenant_id, user_context, query, k, filters)` function signature
+- [x] Accept search parameters:
+  - [x] tenant_id (for multi-tenant support)
+  - [x] user_context (role, level, target_job, learning_preferences)
+  - [x] query (user question)
+  - [x] k (number of results, default 8)
+  - [x] filters (content_type filters: "policies", "learning_content", "internal_roles", etc.)
+- [x] Return search results with chunks and scores
 
 ### Hybrid Search Implementation
-- [ ] Implement keyword search (full-text search using PostgreSQL):
-  - [ ] Use PostgreSQL full-text search (tsvector/tsquery)
-  - [ ] Create searchable text index on chunk_text
-  - [ ] Implement keyword matching and ranking
-- [ ] Implement vector search:
-  - [ ] Generate embedding for query
-  - [ ] Use pgvector cosine similarity search
-  - [ ] Retrieve top-k vector results
-- [ ] Combine keyword + vector search:
-  - [ ] Implement hybrid scoring (weighted combination)
-  - [ ] Merge and deduplicate results
-  - [ ] Re-rank combined results
-  - [ ] Return top-k final results
-- [ ] Apply content_type filters before/after search
-- [ ] Apply tenant_id filtering
+- [x] Implement keyword search (full-text search using PostgreSQL):
+  - [x] Use PostgreSQL full-text search (tsvector/tsquery)
+  - [x] Create searchable text index on chunk_text
+  - [x] Implement keyword matching and ranking
+- [x] Implement vector search:
+  - [x] Generate embedding for query
+  - [x] Use pgvector cosine similarity search
+  - [x] Retrieve top-k vector results
+- [x] Combine keyword + vector search:
+  - [x] Implement hybrid scoring (weighted combination)
+  - [x] Merge and deduplicate results
+  - [x] Re-rank combined results
+  - [x] Return top-k final results
+- [x] Apply content_type filters before/after search
+- [x] Apply tenant_id filtering
 
 ### Embedding Service
-- [ ] Set up embeddings API client (hosted or self-hosted)
-- [ ] Create embedding service abstraction
-- [ ] Implement query embedding generation
-- [ ] Handle API rate limits and retries
-- [ ] Add caching for embeddings (optional)
+- [x] Set up embeddings API client (hosted or self-hosted)
+- [x] Create embedding service abstraction
+- [x] Implement query embedding generation
+- [x] Handle API rate limits and retries
+- [x] Add caching for embeddings (optional)
 
 ---
 
