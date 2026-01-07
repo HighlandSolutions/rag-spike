@@ -55,3 +55,5 @@ After running the migrations, you can verify they worked by:
 - RLS policies are set to allow all operations for PoC (can be restricted later)
 - The embedding vector dimension is set to 1536 for OpenAI's `text-embedding-3-small` model
 
+
+

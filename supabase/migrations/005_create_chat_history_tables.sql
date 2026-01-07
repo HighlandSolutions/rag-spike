@@ -52,3 +52,5 @@ COMMENT ON TABLE chat_messages IS 'Stores individual messages within chat sessio
 COMMENT ON COLUMN chat_sessions.user_context IS 'JSON metadata for user context (role, level, target_job, learning_preferences)';
 COMMENT ON COLUMN chat_messages.chunk_ids IS 'Array of chunk IDs referenced in assistant messages for citations';
 
+
+

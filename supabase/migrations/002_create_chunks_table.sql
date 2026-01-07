@@ -40,3 +40,5 @@ COMMENT ON TABLE chunks IS 'Stores document chunks with embeddings for RAG searc
 COMMENT ON COLUMN chunks.embedding IS 'Vector embedding for semantic search (1536 dimensions for OpenAI text-embedding-3-small)';
 COMMENT ON COLUMN chunks.chunk_metadata IS 'JSON metadata (e.g., page number, row index, source location)';
 
+
+
