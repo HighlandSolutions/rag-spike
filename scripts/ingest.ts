@@ -13,7 +13,7 @@
 import { discoverFiles, validateFile, getContentTypeFromFile, type DiscoveredFile } from '@/lib/ingestion/file-discovery';
 import { parsePdf } from '@/lib/ingestion/pdf-parser';
 import { parseCsv } from '@/lib/ingestion/csv-parser';
-import { chunkMultipleTexts, estimateTokenCount } from '@/lib/ingestion/chunking';
+import { chunkMultipleTexts, estimateTokenCount, type ChunkingConfig } from '@/lib/ingestion/chunking';
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, getDocumentsByTenant, createChunks } from '@/lib/supabase/queries';
 import { testDatabaseConnection } from '@/lib/supabase/client';
@@ -30,6 +30,8 @@ interface IngestionConfig {
   skipExisting: boolean;
   contentTypeConfigPath?: string;
   contentTypeConfig?: ContentTypeConfig;
+  useSemanticChunking?: boolean;
+  chunkingConfig?: ChunkingConfig;
 }
 
 /**
@@ -148,7 +150,12 @@ const processPdfFile = async (
   }));
 
   console.log(`  Chunking text...`);
-  const textChunks = chunkMultipleTexts(pageTexts);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(pageTexts, chunkingConfig);
 
   console.log(`  Created ${textChunks.length} chunks`);
 
@@ -202,7 +209,12 @@ const processCsvFile = async (
   }));
 
   console.log(`  Chunking text...`);
-  const textChunks = chunkMultipleTexts(rowTexts);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(rowTexts, chunkingConfig);
 
   console.log(`  Created ${textChunks.length} chunks`);
 

@@ -5,9 +5,12 @@
 
 import { getSupabaseServerClient } from '@/lib/supabase/client';
 import { generateEmbedding } from '@/lib/ingestion/embeddings';
-import { logError } from '@/lib/utils/logger';
-import type { SearchRequest, SearchResponse, SearchResult, DocumentChunk, ChunkMetadata } from '@/types/domain';
+import { logError, logInfo } from '@/lib/utils/logger';
+import { rerank, type RerankingConfig } from '@/lib/rag/reranking';
+import { processQuery, getQueryVariations, type QueryProcessingConfig } from '@/lib/rag/query-processing';
+import type { SearchRequest, SearchResponse, SearchResult, DocumentChunk, ChunkMetadata, ContentType } from '@/types/domain';
 import type { ChunkRow } from '@/types/database';
+import type { ChatMessage } from '@/types/chat';
 
 /**
  * Type for match_chunks RPC function return value
@@ -230,12 +233,77 @@ const mergeResults = (
 };
 
 /**
- * Main search function implementing hybrid search
+ * Merge results from multiple query variations
+ * Combines results from different query variations, deduplicates, and boosts scores
+ */
+const mergeVariationResults = (
+  allResults: Array<Array<{ chunk: DocumentChunk; score: number; matchType: 'keyword' | 'vector' | 'hybrid' }>>
+): Array<{ chunk: DocumentChunk; score: number; matchType: 'keyword' | 'vector' | 'hybrid' }> => {
+  const chunkMap = new Map<string, {
+    chunk: DocumentChunk;
+    scores: number[];
+    matchTypes: Set<'keyword' | 'vector' | 'hybrid'>;
+  }>();
+
+  // Collect all results from all variations
+  for (const variationResults of allResults) {
+    for (const result of variationResults) {
+      const existing = chunkMap.get(result.chunk.id);
+      if (existing) {
+        existing.scores.push(result.score);
+        existing.matchTypes.add(result.matchType);
+      } else {
+        chunkMap.set(result.chunk.id, {
+          chunk: result.chunk,
+          scores: [result.score],
+          matchTypes: new Set([result.matchType]),
+        });
+      }
+    }
+  }
+
+  // Calculate final scores: max score with boost for appearing in multiple variations
+  const mergedResults = Array.from(chunkMap.values()).map((item) => {
+    // Use max score as base, with boost for multiple matches
+    const maxScore = Math.max(...item.scores);
+    const variationCount = item.scores.length;
+    // Boost: +0.1 per additional variation (capped at +0.3)
+    const boost = Math.min((variationCount - 1) * 0.1, 0.3);
+    const finalScore = Math.min(maxScore + boost, 1.0);
+
+    // Determine match type: prefer hybrid, then vector, then keyword
+    let matchType: 'keyword' | 'vector' | 'hybrid' = 'keyword';
+    if (item.matchTypes.has('hybrid')) {
+      matchType = 'hybrid';
+    } else if (item.matchTypes.has('vector')) {
+      matchType = 'vector';
+    }
+
+    return {
+      chunk: item.chunk,
+      score: finalScore,
+      matchType,
+    };
+  });
+
+  // Sort by score descending
+  mergedResults.sort((a, b) => b.score - a.score);
+
+  return mergedResults;
+};
+
+/**
+ * Main search function implementing hybrid search with optional query processing and re-ranking
  * Optimized with query result caching and improved error handling
  */
-export const search = async (request: SearchRequest): Promise<SearchResponse> => {
+export const search = async (
+  request: SearchRequest,
+  rerankingConfig?: Partial<RerankingConfig>,
+  queryProcessingConfig?: Partial<QueryProcessingConfig>,
+  conversationHistory?: ChatMessage[]
+): Promise<SearchResponse> => {
   const startTime = Date.now();
-  const { tenantId, query, k = 8, filters } = request;
+  const { tenantId, query, k = 8, filters, userContext } = request;
 
   if (!query || query.trim().length === 0) {
     return {
@@ -244,9 +312,6 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
       queryTime: 0,
     };
   }
-
-  // Normalize query for better matching
-  const normalizedQuery = query.trim().toLowerCase();
 
   // Determine content type filters
   const contentTypeFilters =
@@ -262,23 +327,70 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
   const config = DEFAULT_CONFIG;
 
   try {
-    // Perform keyword and vector searches in parallel for better performance
-    // Embedding generation is cached, so this is efficient
-    const [keywordResults, queryEmbedding] = await Promise.all([
-      performKeywordSearch(normalizedQuery, tenantId, contentTypeFilters, config.keywordLimit),
-      generateEmbedding(query), // Use original query for embedding (preserves semantics)
-    ]);
-
-    // Vector search uses the embedding
-    const vectorResults = await performVectorSearch(
-      queryEmbedding,
-      tenantId,
-      contentTypeFilters,
-      config.vectorLimit
+    // Process query (expansion, rewriting, understanding) if enabled
+    const processedQuery = await processQuery(
+      query,
+      queryProcessingConfig,
+      userContext,
+      conversationHistory
     );
 
-    // Merge and deduplicate results
-    let mergedResults = mergeResults(keywordResults, vectorResults, config);
+    // Get all query variations to search with
+    const queryVariations = getQueryVariations(processedQuery);
+    
+    // If query understanding suggests content types, merge with existing filters
+    let finalContentTypeFilters = contentTypeFilters;
+    if (processedQuery.understanding?.requiredContentTypes && processedQuery.understanding.requiredContentTypes.length > 0) {
+      // Merge suggested content types with existing filters
+      const suggested = processedQuery.understanding.requiredContentTypes;
+      // Validate and filter to only valid ContentType values
+      const validContentTypes: ContentType[] = ['policies', 'learning_content', 'internal_roles', 'all'];
+      const validSuggested = suggested.filter((type): type is ContentType => 
+        validContentTypes.includes(type as ContentType)
+      ) as ContentType[];
+      
+      if (finalContentTypeFilters) {
+        // Intersection: only keep types that are in both
+        finalContentTypeFilters = finalContentTypeFilters.filter((type) => validSuggested.includes(type));
+      } else if (validSuggested.length > 0) {
+        // Use suggested types if no filters exist
+        finalContentTypeFilters = validSuggested;
+      }
+    }
+
+    logInfo('Searching with query variations', {
+      originalQuery: query.substring(0, 100),
+      variationCount: queryVariations.length,
+      variations: queryVariations.map((q) => q.substring(0, 50)),
+    });
+
+    // Search with each query variation in parallel
+    const searchPromises = queryVariations.map(async (variation) => {
+      const normalizedVariation = variation.trim().toLowerCase();
+      
+      // Perform keyword and vector searches in parallel
+      const [keywordResults, queryEmbedding] = await Promise.all([
+        performKeywordSearch(normalizedVariation, tenantId, finalContentTypeFilters, config.keywordLimit),
+        generateEmbedding(variation), // Use variation for embedding
+      ]);
+
+      // Vector search uses the embedding
+      const vectorResults = await performVectorSearch(
+        queryEmbedding,
+        tenantId,
+        finalContentTypeFilters,
+        config.vectorLimit
+      );
+
+      // Merge results for this variation
+      return mergeResults(keywordResults, vectorResults, config);
+    });
+
+    // Wait for all searches to complete
+    const allVariationResults = await Promise.all(searchPromises);
+
+    // Merge results from all variations
+    let mergedResults = mergeVariationResults(allVariationResults);
 
     // Apply document ID filter if provided
     if (documentIdFilters && documentIdFilters.length > 0) {
@@ -287,15 +399,21 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
       );
     }
 
-    // Take top-k results
-    const topResults = mergedResults.slice(0, k);
-
-    // Convert to SearchResult format
-    const searchResults: SearchResult[] = topResults.map((result) => ({
+    // Convert to SearchResult format for re-ranking
+    const candidateResults: SearchResult[] = mergedResults.map((result) => ({
       chunk: result.chunk,
       score: result.score,
       matchType: result.matchType,
     }));
+
+    // Apply re-ranking if enabled
+    // Re-ranking will take top-k candidates and return top-k results
+    const rerankingConfigWithDefaults: Partial<RerankingConfig> = {
+      topKResults: k,
+      ...rerankingConfig,
+    };
+
+    const finalResults = await rerank(query, candidateResults, rerankingConfigWithDefaults);
 
     const queryTime = Date.now() - startTime;
 
@@ -305,8 +423,8 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
     }
 
     return {
-      chunks: searchResults,
-      totalCount: searchResults.length,
+      chunks: finalResults,
+      totalCount: finalResults.length,
       queryTime,
     };
   } catch (error) {
@@ -315,7 +433,7 @@ export const search = async (request: SearchRequest): Promise<SearchResponse> =>
     
     // Log error with context
     logError('Search failed', error instanceof Error ? error : new Error(errorMessage), {
-      query: normalizedQuery,
+      query: query.substring(0, 100),
       tenantId,
       filters: contentTypeFilters,
       queryTime,

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { chunkMultipleTexts } from '@/lib/ingestion/chunking';
+import { chunkMultipleTexts, type ChunkingConfig } from '@/lib/ingestion/chunking';
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, createChunks, getDocumentsByTenant } from '@/lib/supabase/queries';
 import { getContentType } from '@/lib/ingestion/content-type-config';
@@ -126,7 +126,12 @@ const processFileBuffer = async (
 
   // Chunk the text
   const textItems = parsedData.pages || parsedData.rows || [];
-  const textChunks = chunkMultipleTexts(textItems);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(textItems, chunkingConfig);
 
   // Generate embeddings
   const chunkTexts = textChunks.map((chunk) => chunk.text);

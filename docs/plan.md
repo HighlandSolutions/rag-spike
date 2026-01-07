@@ -421,9 +421,9 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [x] Add chat history persistence
 
 ### Phase 12: Advanced RAG Improvements
-- [ ] Improve chunking strategy (semantic chunking)
-- [ ] Add re-ranking for search results
-- [ ] Add query expansion/rewriting
+- [x] Improve chunking strategy (semantic chunking)
+- [x] Add re-ranking for search results
+- [x] Add query expansion/rewriting
 
 ### Phase 13: Extended File Type Support
 - [ ] Add support for more file types (Word, Markdown, etc.)
