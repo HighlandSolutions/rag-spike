@@ -155,31 +155,31 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 ## Phase 3: Basic Chat UI
 
 ### UI Components (shadcn/ui)
-- [ ] Set up shadcn/ui components (Button, Input, Card, etc.)
-- [ ] Create ChatContainer component
-- [ ] Create MessageList component
-- [ ] Create MessageBubble component (user/assistant)
-- [ ] Create ChatInput component with placeholder
-- [ ] Create UserContextForm component (for role, level, target_job, learning_preferences)
-- [ ] Add basic styling with Tailwind CSS v4
+- [x] Set up shadcn/ui components (Button, Input, Card, etc.)
+- [x] Create ChatContainer component
+- [x] Create MessageList component
+- [x] Create MessageBubble component (user/assistant)
+- [x] Create ChatInput component with placeholder
+- [x] Create UserContextForm component (for role, level, target_job, learning_preferences)
+- [x] Add basic styling with Tailwind CSS v4
 
 ### Chat State Management
-- [ ] Set up chat state (messages array)
-- [ ] Set up user context state (role, level, target_job, learning_preferences)
-- [ ] Implement message submission handler
-- [ ] Implement message display logic
-- [ ] Add loading states for pending responses
-- [ ] Handle streaming message updates
+- [x] Set up chat state (messages array)
+- [x] Set up user context state (role, level, target_job, learning_preferences)
+- [x] Implement message submission handler
+- [x] Implement message display logic
+- [x] Add loading states for pending responses
+- [x] Handle streaming message updates
 
 ### User Context Collection
-- [ ] Create user profile/settings UI (optional, can be stored in localStorage)
-- [ ] Collect user metadata:
-  - [ ] Role (dropdown or input)
-  - [ ] Level (dropdown: junior, mid, senior, etc.)
-  - [ ] Target job (input)
-  - [ ] Learning preferences (multi-select or tags)
-- [ ] Store user context (localStorage or session)
-- [ ] Include user context in API requests
+- [x] Create user profile/settings UI (optional, can be stored in localStorage)
+- [x] Collect user metadata:
+  - [x] Role (dropdown or input)
+  - [x] Level (dropdown: junior, mid, senior, etc.)
+  - [x] Target job (input)
+  - [x] Learning preferences (multi-select or tags)
+- [x] Store user context (localStorage or session)
+- [x] Include user context in API requests
 
 ---
 
