@@ -12,6 +12,11 @@ import type { Document, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ApiError } from '@/types/domain';
 
 /**
+ * Default tenant ID (must match the one used in chat/search)
+ */
+const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || 'default-tenant';
+
+/**
  * Maximum file size (50MB)
  */
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -169,7 +174,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const tenantId = (formData.get('tenant_id') as string) || process.env.TENANT_ID || 'default';
+    const tenantId = (formData.get('tenant_id') as string) || DEFAULT_TENANT_ID;
 
     if (!file) {
       const error: ApiError = {

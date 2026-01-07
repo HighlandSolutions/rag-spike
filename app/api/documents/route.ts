@@ -8,13 +8,18 @@ import { getDocumentsByTenant } from '@/lib/supabase/queries';
 import type { ApiError } from '@/types/domain';
 
 /**
+ * Default tenant ID (must match the one used in chat/search)
+ */
+const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || 'default-tenant';
+
+/**
  * GET /api/documents
  * List all documents for a tenant
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = searchParams.get('tenant_id') || process.env.TENANT_ID || 'default';
+    const tenantId = searchParams.get('tenant_id') || DEFAULT_TENANT_ID;
 
     const documents = await getDocumentsByTenant(tenantId);
 
@@ -42,4 +47,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(apiError, { status: 500 });
   }
 }
+
+
 

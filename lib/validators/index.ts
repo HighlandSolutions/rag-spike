@@ -289,3 +289,5 @@ export const isValidEmbedding = (embedding: unknown, expectedDimension = 1536): 
   return embedding.every((value) => typeof value === 'number' && !isNaN(value));
 };
 
+
+

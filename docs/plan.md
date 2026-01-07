@@ -426,7 +426,49 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [x] Add query expansion/rewriting
 
 ### Phase 13: Extended File Type Support
-- [ ] Add support for more file types (Word, Markdown, etc.)
+- [ ] Add support for Word documents (.docx, .doc)
+- [ ] Add support for Excel spreadsheets (.xlsx, .xls)
+- [ ] Add support for PowerPoint presentations (.pptx, .ppt)
+- [ ] Add support for HTML files (.html, .htm)
+
+### Phase 14: Single URL Ingestion & Web Scraping
+- [ ] Install web scraping dependencies (cheerio, @mozilla/readability, jsdom, node-fetch)
+- [ ] Create URL parser utility (`lib/ingestion/url-parser.ts`)
+  - [ ] Implement URL fetching with timeout and error handling
+  - [ ] Extract HTML content from URLs
+  - [ ] Use Readability or similar to extract main content (remove nav, ads, etc.)
+  - [ ] Convert HTML to clean text while preserving structure
+  - [ ] Extract metadata (page title, description, last modified date)
+  - [ ] Handle redirects, 404s, and network errors gracefully
+- [ ] Extend file discovery to support URLs
+  - [ ] Support `.urls` text files (one URL per line)
+  - [ ] Support direct URL input via CLI argument
+  - [ ] Validate URL format before processing
+  - [ ] Track URL as `sourcePath` in database
+- [ ] Create URL processor function
+  - [ ] Integrate with existing `processFile` pattern
+  - [ ] Chunk extracted text content (reuse existing chunking logic)
+  - [ ] Generate embeddings for URL content
+  - [ ] Store URL metadata (original URL, page title, fetched timestamp)
+- [ ] Update ingestion CLI script
+  - [ ] Add `--url` flag for single URL ingestion
+  - [ ] Add `--urls-file` flag for batch URL ingestion
+  - [ ] Support URL list files in content directory
+  - [ ] Add idempotency check for URLs (skip already-ingested URLs)
+- [ ] Add URL ingestion to document upload API
+  - [ ] Support URL input in document upload UI
+  - [ ] Validate URLs before processing
+  - [ ] Return appropriate error messages for invalid URLs
+- [ ] Handle edge cases
+  - [ ] Rate limiting for multiple URLs from same domain
+  - [ ] Timeout handling (default 30 seconds)
+  - [ ] User-Agent header configuration
+  - [ ] Handle JavaScript-rendered content (optional, for future)
+- [ ] Add URL metadata to chunk metadata
+  - [ ] Store original URL in chunk metadata
+  - [ ] Store page title and description
+  - [ ] Store fetch timestamp for freshness tracking
+  - [ ] Support re-fetching URLs for updates
 
 ---
 
