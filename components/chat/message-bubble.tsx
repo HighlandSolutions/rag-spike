@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { SourceCards } from './source-cards';
+import { TooltipProvider } from './tooltip-provider';
 import type { SourceCardData } from './source-card';
 import type { ChatMessage } from '@/types/chat';
 
@@ -14,6 +15,7 @@ interface MessageBubbleProps {
 export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
   const contentRef = useRef<HTMLDivElement>(null);
+  const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const contentElement = contentRef.current;
@@ -50,54 +52,65 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
 
   const hasCitations = !isUser && citations.length > 0;
 
+  const formatMessageContent = (content: string): string => {
+    // Convert markdown bold (**text**) to HTML <strong> tags
+    let formatted = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Process citations after markdown formatting
+    formatted = formatted.replace(
+      /\[(\d+)\]/g,
+      (match, num) =>
+        `<sup><a href="#citation-${num}" class="citation-link" data-citation="${num}" aria-label="Citation ${num}">${match}</a></sup>`
+    );
+    return formatted;
+  };
+
   return (
-    <div
-      className={cn(
-        'flex w-full flex-col',
-        isUser ? 'items-end' : 'items-start'
-      )}
-    >
+    <TooltipProvider citations={citations} containerElement={containerElement}>
       <div
         className={cn(
-          'max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 sm:px-4 sm:py-3 transition-all duration-200',
-          isUser
-            ? 'bg-primary text-primary-foreground'
-            : message.error
-              ? 'bg-destructive/10 text-destructive border border-destructive/20'
-              : 'bg-muted text-muted-foreground'
+          'flex w-full flex-col',
+          isUser ? 'items-end' : 'items-start'
         )}
       >
-        {message.isLoading ? (
-          <div className="flex items-center gap-2" role="status" aria-label="Loading response">
-            <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-            <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-            <div className="h-2 w-2 animate-bounce rounded-full bg-current" />
+        <div
+          className={cn(
+            'max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 sm:px-4 sm:py-3 transition-all duration-200',
+            isUser
+              ? 'bg-primary text-primary-foreground'
+              : message.error
+                ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                : 'bg-muted text-muted-foreground'
+          )}
+        >
+          {message.isLoading ? (
+            <div className="flex items-center gap-2" role="status" aria-label="Loading response">
+              <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+              <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+              <div className="h-2 w-2 animate-bounce rounded-full bg-current" />
+            </div>
+          ) : (
+            <div
+              ref={(node) => {
+                contentRef.current = node;
+                setContainerElement(node);
+              }}
+              className={cn(
+                'whitespace-pre-wrap break-words',
+                !isUser && !message.error && '[&_.citation-link]:cursor-pointer [&_.citation-link]:font-semibold [&_.citation-link]:text-primary [&_.citation-link]:underline [&_.citation-link]:decoration-dotted [&_.citation-link]:underline-offset-2 [&_.citation-link]:transition-opacity [&_.citation-link]:hover:opacity-80'
+              )}
+              dangerouslySetInnerHTML={{
+                __html: message.error ? message.content : formatMessageContent(message.content),
+              }}
+            />
+          )}
+        </div>
+        {hasCitations && (
+          <div className="mt-2 w-full max-w-[80%]">
+            <SourceCards citations={citations} />
           </div>
-        ) : (
-          <div
-            ref={contentRef}
-            className={cn(
-              'whitespace-pre-wrap break-words',
-              !isUser && !message.error && '[&_.citation-link]:cursor-pointer [&_.citation-link]:font-semibold [&_.citation-link]:text-primary [&_.citation-link]:underline [&_.citation-link]:decoration-dotted [&_.citation-link]:underline-offset-2 [&_.citation-link]:transition-opacity [&_.citation-link]:hover:opacity-80'
-            )}
-            dangerouslySetInnerHTML={{
-              __html: message.error
-                ? message.content
-                : message.content.replace(
-                    /\[(\d+)\]/g,
-                    (match, num) =>
-                      `<sup><a href="#citation-${num}" class="citation-link" data-citation="${num}" aria-label="Citation ${num}">${match}</a></sup>`
-                  ),
-            }}
-          />
         )}
       </div>
-      {hasCitations && (
-        <div className="mt-2 w-full max-w-[80%]">
-          <SourceCards citations={citations} />
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   );
 };
 
