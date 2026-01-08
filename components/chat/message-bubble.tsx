@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { SourceCards } from './source-cards';
 import { TooltipProvider } from './tooltip-provider';
 import type { SourceCardData } from './source-card';
 import type { ChatMessage } from '@/types/chat';
@@ -10,16 +9,17 @@ import type { ChatMessage } from '@/types/chat';
 interface MessageBubbleProps {
   message: ChatMessage;
   citations?: SourceCardData[];
+  onCitationClick?: (citationNumber: number) => void;
 }
 
-export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) => {
+export const MessageBubble = ({ message, citations = [], onCitationClick }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
   const contentRef = useRef<HTMLDivElement>(null);
   const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const contentElement = contentRef.current;
-    if (!contentElement || isUser || citations.length === 0) {
+    if (!contentElement || isUser || citations.length === 0 || !onCitationClick) {
       return;
     }
 
@@ -30,16 +30,7 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
         event.preventDefault();
         const citationNumber = citationLink.getAttribute('data-citation');
         if (citationNumber) {
-          const citationId = `citation-${citationNumber}`;
-          const citationElement = document.getElementById(citationId);
-          if (citationElement) {
-            citationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Add a highlight effect
-            citationElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-            setTimeout(() => {
-              citationElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-            }, 2000);
-          }
+          onCitationClick(parseInt(citationNumber, 10));
         }
       }
     };
@@ -48,9 +39,7 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
     return () => {
       contentElement.removeEventListener('click', handleCitationClick);
     };
-  }, [isUser, citations]);
-
-  const hasCitations = !isUser && citations.length > 0;
+  }, [isUser, citations, onCitationClick]);
 
   const formatMessageContent = (content: string): string => {
     // Convert markdown bold (**text**) to HTML <strong> tags
@@ -104,11 +93,6 @@ export const MessageBubble = ({ message, citations = [] }: MessageBubbleProps) =
             />
           )}
         </div>
-        {hasCitations && (
-          <div className="mt-2 w-full max-w-[80%]">
-            <SourceCards citations={citations} />
-          </div>
-        )}
       </div>
     </TooltipProvider>
   );
