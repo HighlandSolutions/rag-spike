@@ -11,11 +11,12 @@ interface SidebarProps {
   currentSessionId: string | null;
   onNewChat: () => void;
   onLoadSession: (sessionId: string) => void;
+  isPinned: boolean;
+  onPinChange: (pinned: boolean) => void;
 }
 
-export const Sidebar = ({ currentSessionId, onNewChat, onLoadSession }: SidebarProps) => {
+export const Sidebar = ({ currentSessionId, onNewChat, onLoadSession, isPinned, onPinChange }: SidebarProps) => {
   const [showChatsPopout, setShowChatsPopout] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
   const pathname = usePathname();
   const isChatPage = pathname === '/' || pathname.startsWith('/chat');
   const isDocumentsPage = pathname === '/documents';
@@ -51,19 +52,18 @@ export const Sidebar = ({ currentSessionId, onNewChat, onLoadSession }: SidebarP
             className={`w-12 h-12 rounded-lg transition-colors ${
               isChatPage
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : showChatsPopout
+                : showChatsPopout || isPinned
                   ? 'bg-accent'
                   : 'hover:bg-accent'
             }`}
             aria-label="Chats"
-            aria-expanded={showChatsPopout}
+            aria-expanded={showChatsPopout || isPinned}
             onClick={() => {
               if (showChatsPopout) {
                 setShowChatsPopout(false);
-                setIsPinned(false);
+                onPinChange(false);
               } else {
                 setShowChatsPopout(true);
-                setIsPinned(true);
               }
             }}
           >
@@ -76,15 +76,20 @@ export const Sidebar = ({ currentSessionId, onNewChat, onLoadSession }: SidebarP
           >
             Chat
           </span>
-          {showChatsPopout && (
+          {(showChatsPopout || isPinned) && (
             <ChatsPopout
               currentSessionId={currentSessionId}
               onLoadSession={onLoadSession}
               isPinned={isPinned}
-              onPinToggle={setIsPinned}
+              onPinToggle={(pinned) => {
+                onPinChange(pinned);
+                if (pinned) {
+                  setShowChatsPopout(true);
+                }
+              }}
               onClose={() => {
                 setShowChatsPopout(false);
-                setIsPinned(false);
+                onPinChange(false);
               }}
             />
           )}

@@ -33,6 +33,7 @@ export const isUserContext = (value: unknown): value is UserContext => {
 
   const ctx = value as Record<string, unknown>;
 
+  // Basic fields
   if (ctx.role !== undefined && typeof ctx.role !== 'string') {
     return false;
   }
@@ -55,6 +56,132 @@ export const isUserContext = (value: unknown): value is UserContext => {
     if (!ctx.learningPreferences.every((pref) => typeof pref === 'string')) {
       return false;
     }
+  }
+
+  // Communication style preferences
+  if (ctx.communicationStyle !== undefined) {
+    const validStyles = ['concise', 'detailed', 'balanced'];
+    if (!validStyles.includes(ctx.communicationStyle as string)) {
+      return false;
+    }
+  }
+
+  if (ctx.tone !== undefined) {
+    const validTones = ['formal', 'casual', 'professional'];
+    if (!validTones.includes(ctx.tone as string)) {
+      return false;
+    }
+  }
+
+  if (ctx.technicalDepth !== undefined) {
+    const validDepths = ['beginner', 'intermediate', 'advanced', 'expert'];
+    if (!validDepths.includes(ctx.technicalDepth as string)) {
+      return false;
+    }
+  }
+
+  // Domain expertise
+  if (ctx.expertise !== undefined) {
+    if (!Array.isArray(ctx.expertise)) {
+      return false;
+    }
+    if (!ctx.expertise.every((item) => typeof item === 'string')) {
+      return false;
+    }
+  }
+
+  if (ctx.currentSkills !== undefined) {
+    if (!Array.isArray(ctx.currentSkills)) {
+      return false;
+    }
+    if (!ctx.currentSkills.every((item) => typeof item === 'string')) {
+      return false;
+    }
+  }
+
+  if (ctx.knowledgeGaps !== undefined) {
+    if (!Array.isArray(ctx.knowledgeGaps)) {
+      return false;
+    }
+    if (!ctx.knowledgeGaps.every((item) => typeof item === 'string')) {
+      return false;
+    }
+  }
+
+  // Goals and objectives
+  if (ctx.primaryGoal !== undefined) {
+    const validGoals = ['skill_development', 'career_transition', 'role_preparation', 'general_learning'];
+    if (!validGoals.includes(ctx.primaryGoal as string)) {
+      return false;
+    }
+  }
+
+  if (ctx.timeHorizon !== undefined) {
+    const validHorizons = ['immediate', 'short_term', 'long_term'];
+    if (!validHorizons.includes(ctx.timeHorizon as string)) {
+      return false;
+    }
+  }
+
+  if (ctx.focusAreas !== undefined) {
+    if (!Array.isArray(ctx.focusAreas)) {
+      return false;
+    }
+    if (!ctx.focusAreas.every((item) => typeof item === 'string')) {
+      return false;
+    }
+  }
+
+  // Response format preferences
+  if (ctx.preferredFormat !== undefined) {
+    const validFormats = ['structured', 'narrative', 'bullet_points', 'step_by_step'];
+    if (!validFormats.includes(ctx.preferredFormat as string)) {
+      return false;
+    }
+  }
+
+  if (ctx.includeExamples !== undefined && typeof ctx.includeExamples !== 'boolean') {
+    return false;
+  }
+
+  if (ctx.includeCodeSnippets !== undefined && typeof ctx.includeCodeSnippets !== 'boolean') {
+    return false;
+  }
+
+  if (ctx.citationDetail !== undefined) {
+    const validDetails = ['minimal', 'standard', 'detailed'];
+    if (!validDetails.includes(ctx.citationDetail as string)) {
+      return false;
+    }
+  }
+
+  // Context and background
+  if (ctx.industry !== undefined && typeof ctx.industry !== 'string') {
+    return false;
+  }
+
+  if (ctx.companySize !== undefined) {
+    const validSizes = ['startup', 'small', 'medium', 'large', 'enterprise'];
+    if (!validSizes.includes(ctx.companySize as string)) {
+      return false;
+    }
+  }
+
+  if (ctx.yearsOfExperience !== undefined && typeof ctx.yearsOfExperience !== 'number') {
+    return false;
+  }
+
+  if (ctx.currentRole !== undefined && typeof ctx.currentRole !== 'string') {
+    return false;
+  }
+
+  // Language and localization
+  if (ctx.language !== undefined && typeof ctx.language !== 'string') {
+    return false;
+  }
+
+  if (ctx.region !== undefined && typeof ctx.region !== 'string') {
+    return false;
   }
 
   return true;

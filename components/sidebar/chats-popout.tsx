@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Pin, PinOff, X, Pencil, Trash2 } from 'lucide-react';
 import { listChatSessions, updateChatSession, deleteChatSession, type ChatSession } from '@/lib/chat/history';
-import { ChatHistorySidebar } from './chat-history-sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -24,8 +23,6 @@ export const ChatsPopout = ({
 }: ChatsPopoutProps) => {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -58,13 +55,6 @@ export const ChatsPopout = ({
   }, [editingSessionId]);
 
   const handleSessionClick = (session: ChatSession) => {
-    if (selectedSessionId === session.id) {
-      setSelectedSessionId(null);
-      setSelectedSession(null);
-    } else {
-      setSelectedSessionId(session.id);
-      setSelectedSession(session);
-    }
     onLoadSession(session.id);
   };
 
@@ -126,29 +116,12 @@ export const ChatsPopout = ({
       if (currentSessionId === session.id) {
         onLoadSession('');
       }
-      if (selectedSessionId === session.id) {
-        setSelectedSessionId(null);
-        setSelectedSession(null);
-      }
     } catch (error) {
       console.error('Failed to delete chat session:', error);
       alert('Failed to delete chat session. Please try again.');
     }
   };
 
-  const handleDeleteFromSidebar = async (sessionId: string) => {
-    const session = chatSessions.find((s) => s.id === sessionId);
-    if (session) {
-      await handleDelete(session);
-    }
-  };
-
-  const handleRenameFromSidebar = async (sessionId: string) => {
-    await loadSessions();
-    if (currentSessionId === sessionId) {
-      onLoadSession(sessionId);
-    }
-  };
 
   return (
     <>
@@ -206,7 +179,6 @@ export const ChatsPopout = ({
                 <ul className="space-y-1">
                   {chatSessions.map((session) => {
                     const isActive = currentSessionId === session.id;
-                    const isSelected = selectedSessionId === session.id;
                     const isEditing = editingSessionId === session.id;
 
                     return (
@@ -229,8 +201,6 @@ export const ChatsPopout = ({
                             className={`flex items-center gap-1 group/item ${
                               isActive
                                 ? 'bg-primary text-primary-foreground'
-                                : isSelected
-                                ? 'bg-accent'
                                 : 'hover:bg-accent/50'
                             } rounded-md transition-colors min-w-0`}
                           >
@@ -279,13 +249,6 @@ export const ChatsPopout = ({
           </div>
         </div>
       </div>
-      {selectedSession && (
-        <ChatHistorySidebar
-          session={selectedSession}
-          onDelete={handleDeleteFromSidebar}
-          onRename={handleRenameFromSidebar}
-        />
-      )}
     </>
   );
 };

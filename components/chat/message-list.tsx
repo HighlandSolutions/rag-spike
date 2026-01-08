@@ -32,8 +32,8 @@ export const MessageList = ({ messages, citationsMap = new Map(), onCitationClic
 
   if (messages.length === 0) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center px-4 py-8" role="status" aria-label="Empty chat">
-        <div className="w-full max-w-2xl text-center animate-in fade-in duration-300">
+      <div className="flex items-center justify-center min-h-[60vh]" role="status" aria-label="Empty chat">
+        <div className="w-full text-center animate-in fade-in duration-300">
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl" />
@@ -80,7 +80,7 @@ export const MessageList = ({ messages, citationsMap = new Map(), onCitationClic
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-3 sm:gap-4 overflow-y-auto p-2 sm:p-4 pb-32" role="log" aria-label="Chat messages">
+    <div className="flex flex-col gap-6 sm:gap-8" role="log" aria-label="Chat messages">
       {messages.map((message, index) => {
         const citations = citationsMap.get(message.id) || [];
         return (
