@@ -16,9 +16,10 @@ export interface SourceCardData {
 interface SourceCardProps {
   citation: SourceCardData;
   className?: string;
+  isHighlighted?: boolean;
 }
 
-export const SourceCard = ({ citation, className }: SourceCardProps) => {
+export const SourceCard = ({ citation, className, isHighlighted }: SourceCardProps) => {
   const citationId = `citation-${citation.citationNumber}`;
 
   return (
@@ -26,6 +27,7 @@ export const SourceCard = ({ citation, className }: SourceCardProps) => {
       id={citationId}
       className={cn(
         'flex min-w-[280px] max-w-[400px] flex-col gap-2 p-4 transition-shadow hover:shadow-md',
+        isHighlighted && 'ring-2 ring-primary ring-offset-2',
         className
       )}
     >
