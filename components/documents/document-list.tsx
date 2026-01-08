@@ -4,6 +4,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { File, Trash2, Loader2, RefreshCw } from 'lucide-react';
 
 interface Document {
@@ -24,6 +34,7 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [documentToDelete, setDocumentToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     setIsLoading(true);
@@ -55,12 +66,18 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
     fetchDocuments();
   }, [fetchDocuments]);
 
-  const handleDelete = async (documentId: string) => {
-    if (!confirm('Are you sure you want to delete this document? This will also delete all associated chunks.')) {
+  const handleDeleteClick = (documentId: string, documentName: string) => {
+    setDocumentToDelete({ id: documentId, name: documentName });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!documentToDelete) {
       return;
     }
 
+    const documentId = documentToDelete.id;
     setDeletingIds((prev) => new Set(prev).add(documentId));
+    setDocumentToDelete(null);
 
     try {
       const response = await fetch(`/api/documents/${documentId}`, {
@@ -86,6 +103,10 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
         return newSet;
       });
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDocumentToDelete(null);
   };
 
   const formatDate = (dateString: string): string => {
@@ -180,7 +201,7 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(document.id)}
+                  onClick={() => handleDeleteClick(document.id, document.name)}
                   disabled={deletingIds.has(document.id)}
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   aria-label={`Delete ${document.name}`}
@@ -196,6 +217,24 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
           </div>
         )}
       </div>
+
+      <AlertDialog open={documentToDelete !== null} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{documentToDelete?.name}&quot;? This action will permanently
+              delete the document and all associated chunks from the database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
