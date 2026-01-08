@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentContext, setCurrentContext] = useState<UserContext | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [isChatHistoryPinned, setIsChatHistoryPinned] = useState(false);
 
   useEffect(() => {
     const saved = loadUserContext();
@@ -25,7 +26,7 @@ export default function ProfilePage() {
     router.push('/');
   };
 
-  const handleLoadSession = (sessionId: string) => {
+  const handleLoadSession = () => {
     router.push('/');
   };
 
@@ -52,6 +53,8 @@ export default function ProfilePage() {
         currentSessionId={null}
         onNewChat={handleNewChat}
         onLoadSession={handleLoadSession}
+        isPinned={isChatHistoryPinned}
+        onPinChange={setIsChatHistoryPinned}
       />
 
       {/* Main Content */}

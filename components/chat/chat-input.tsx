@@ -9,14 +9,12 @@ interface ChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
-  sidebarOpen?: boolean;
 }
 
 export const ChatInput = ({
   onSendMessage,
   disabled = false,
   placeholder = 'Type your message...',
-  sidebarOpen = false,
 }: ChatInputProps) => {
   const [input, setInput] = useState('');
 

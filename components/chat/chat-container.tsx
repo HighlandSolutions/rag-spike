@@ -328,7 +328,6 @@ export const ChatContainer = () => {
             onSendMessage={handleSendMessage}
             disabled={isLoading}
             placeholder="Ask a question..."
-            sidebarOpen={false}
           />
         </div>
 

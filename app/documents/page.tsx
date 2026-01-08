@@ -1,17 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { DocumentManagement } from '@/components/documents/document-management';
 
 export default function DocumentsPage() {
   const router = useRouter();
+  const [isChatHistoryPinned, setIsChatHistoryPinned] = useState(false);
 
   const handleNewChat = () => {
     router.push('/');
   };
 
-  const handleLoadSession = (sessionId: string) => {
+  const handleLoadSession = () => {
     router.push('/');
   };
 
@@ -22,6 +24,8 @@ export default function DocumentsPage() {
         currentSessionId={null}
         onNewChat={handleNewChat}
         onLoadSession={handleLoadSession}
+        isPinned={isChatHistoryPinned}
+        onPinChange={setIsChatHistoryPinned}
       />
 
       <div className="min-h-screen flex flex-col ml-16">
