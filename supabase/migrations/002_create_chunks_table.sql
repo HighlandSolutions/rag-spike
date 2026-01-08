@@ -42,3 +42,4 @@ COMMENT ON COLUMN chunks.chunk_metadata IS 'JSON metadata (e.g., page number, ro
 
 
 
+

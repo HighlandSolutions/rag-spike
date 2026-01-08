@@ -1,23 +1,37 @@
 'use client';
 
-import { SourceCard, type SourceCardData } from './source-card';
+import { SourceListItem } from './source-list-item';
+import type { SourceCardData } from './source-card';
 
 interface SourceCardsProps {
   citations: SourceCardData[];
   className?: string;
+  highlightedCitation?: number | null;
 }
 
-export const SourceCards = ({ citations, className }: SourceCardsProps) => {
+export const SourceCards = ({ citations, className, highlightedCitation }: SourceCardsProps) => {
   if (citations.length === 0) {
-    return null;
+    return (
+      <div className={className}>
+        <p className="text-sm text-muted-foreground">No sources available.</p>
+      </div>
+    );
   }
+
+  const handleCitationClick = () => {
+    // Scroll to citation is handled by parent component
+  };
 
   return (
     <div className={className}>
-      <div className="mb-2 text-xs font-medium text-muted-foreground">Sources</div>
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex flex-col">
         {citations.map((citation) => (
-          <SourceCard key={citation.chunkId} citation={citation} />
+          <SourceListItem
+            key={citation.chunkId}
+            source={citation}
+            isHighlighted={highlightedCitation === citation.citationNumber}
+            onClick={handleCitationClick}
+          />
         ))}
       </div>
     </div>

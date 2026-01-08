@@ -50,6 +50,37 @@ export interface UserContext {
   level?: 'junior' | 'mid' | 'senior' | 'lead' | 'executive';
   targetJob?: string;
   learningPreferences?: string[];
+  
+  // Communication style preferences
+  communicationStyle?: 'concise' | 'detailed' | 'balanced';
+  tone?: 'formal' | 'casual' | 'professional';
+  technicalDepth?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  
+  // Domain expertise
+  expertise?: string[];
+  currentSkills?: string[];
+  knowledgeGaps?: string[];
+  
+  // Goals and objectives
+  primaryGoal?: 'skill_development' | 'career_transition' | 'role_preparation' | 'general_learning';
+  timeHorizon?: 'immediate' | 'short_term' | 'long_term';
+  focusAreas?: string[];
+  
+  // Response format preferences
+  preferredFormat?: 'structured' | 'narrative' | 'bullet_points' | 'step_by_step';
+  includeExamples?: boolean;
+  includeCodeSnippets?: boolean;
+  citationDetail?: 'minimal' | 'standard' | 'detailed';
+  
+  // Context and background
+  industry?: string;
+  companySize?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
+  yearsOfExperience?: number;
+  currentRole?: string;
+  
+  // Language and localization
+  language?: string;
+  region?: string;
 }
 
 /**

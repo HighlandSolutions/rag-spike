@@ -26,7 +26,7 @@ export const SourceCard = ({ citation, className, isHighlighted }: SourceCardPro
     <Card
       id={citationId}
       className={cn(
-        'flex min-w-[280px] max-w-[400px] flex-col gap-2 p-4 transition-shadow hover:shadow-md',
+        'flex min-w-[280px] max-w-[70ch] flex-col gap-2 p-4 transition-shadow hover:shadow-md',
         isHighlighted && 'ring-2 ring-primary ring-offset-2',
         className
       )}

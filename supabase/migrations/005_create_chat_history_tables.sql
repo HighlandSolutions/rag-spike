@@ -54,3 +54,4 @@ COMMENT ON COLUMN chat_messages.chunk_ids IS 'Array of chunk IDs referenced in a
 
 
 
+

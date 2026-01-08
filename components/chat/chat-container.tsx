@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { User } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sidebar } from '@/components/sidebar';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
 import { UserContextForm } from './user-context-form';
 import { SourceCards } from './source-cards';
-import { SourceCard } from './source-card';
-import { SourceListItem } from './source-list-item';
 import type { ChatMessage } from '@/types/chat';
 import type { UserContext } from '@/types/domain';
 import type { SourceCardData } from './source-card';
@@ -31,7 +28,7 @@ export const ChatContainer = () => {
   const [showUserContextForm, setShowUserContextForm] = useState(false);
   const [citationsMap, setCitationsMap] = useState<Map<string, SourceCardData[]>>(new Map());
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('answer');
+  const [activeTab, setActiveTab] = useState<string>('answer');
   const [highlightedCitation, setHighlightedCitation] = useState<number | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
 
@@ -240,160 +237,113 @@ export const ChatContainer = () => {
     setShowUserContextForm(false);
   }, []);
 
-  const handleNewChat = useCallback(async () => {
-    try {
-      const newSession = await createChatSession(userContext || undefined);
-      setCurrentSessionId(newSession.id);
-      setMessages([]);
-      setCitationsMap(new Map());
-      setActiveTab('answer');
-    } catch (error) {
-      console.error('Failed to create new chat:', error);
-    }
-  }, [userContext]);
-
-  const handleLoadSession = useCallback(async (sessionId: string) => {
-    try {
-      const sessionMessages = await loadChatMessages(sessionId);
-      setCurrentSessionId(sessionId);
-      setMessages(sessionMessages);
-      setCitationsMap(new Map());
-
-      // Load citations for messages that have chunkIds
-      for (const msg of sessionMessages) {
-        if (msg.chunkIds && msg.chunkIds.length > 0) {
-          const citations = await fetchCitationMetadata(msg.chunkIds);
-          setCitationsMap((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(msg.id, citations);
-            return newMap;
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load session:', error);
-    }
-  }, []);
-
-  // Collect all sources from all messages for the Sources tab
-  const allSources = useMemo(() => {
-    const sources: SourceCardData[] = [];
-    citationsMap.forEach((citations) => {
-      sources.push(...citations);
-    });
-    // Remove duplicates based on chunkId
-    const uniqueSources = Array.from(
-      new Map(sources.map((source) => [source.chunkId, source])).values()
-    );
-    return uniqueSources;
-  }, [citationsMap]);
-
-  // Handle citation click - switch to sources tab and scroll to citation
   const handleCitationClick = useCallback((citationNumber: number) => {
     setActiveTab('sources');
     setHighlightedCitation(citationNumber);
-    // Use setTimeout to ensure tab switch completes before scrolling
-    setTimeout(() => {
-      const citationId = `citation-${citationNumber}`;
-      const citationElement = document.getElementById(citationId);
-      if (citationElement) {
-        citationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Add highlight effect
-        citationElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-        setTimeout(() => {
-          citationElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-          setHighlightedCitation(null);
-        }, 2000);
-      }
-    }, 100);
   }, []);
 
+  // Scroll to highlighted citation when sources tab is active
+  useEffect(() => {
+    if (activeTab === 'sources' && highlightedCitation !== null) {
+      // Wait for tab content to render
+      const timeoutId = setTimeout(() => {
+        const citationElement = document.getElementById(`citation-${highlightedCitation}`);
+        if (citationElement) {
+          citationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Remove highlight after animation completes
+          setTimeout(() => {
+            setHighlightedCitation(null);
+          }, 2000);
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [activeTab, highlightedCitation]);
+
+  // Aggregate all sources from all messages
+  const allSources = Array.from(citationsMap.values()).flat();
+
+  // Check if there's at least one completed assistant message
+  // Only show tabs when there are messages AND at least one completed assistant response
+  // This ensures tabs don't show in empty state or when only user messages exist
+  // Must have: role === 'assistant', not loading, and has non-empty content
+  const hasCompletedAssistantMessage = (() => {
+    // Explicitly return false for empty state
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return false;
+    }
+    
+    // Check for at least one completed assistant message
+    return messages.some(
+      (msg) => {
+        if (msg.role !== 'assistant') return false;
+        if (msg.isLoading === true) return false;
+        if (!msg.content || typeof msg.content !== 'string') return false;
+        if (msg.content.trim().length === 0) return false;
+        return true;
+      }
+    );
+  })();
+
   return (
-    <div className="flex h-screen flex-col relative">
-      {/* Sidebar */}
-      <Sidebar
-        currentSessionId={currentSessionId}
-        onNewChat={handleNewChat}
-        onLoadSession={handleLoadSession}
-      />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col h-full overflow-hidden ml-16">
-        {messages.length > 0 && (
-          <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-4" role="banner">
-            <div className="mx-auto flex max-w-[70ch] items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="answer">Answer</TabsTrigger>
-                <TabsTrigger value="sources">Sources</TabsTrigger>
-              </TabsList>
-            </div>
-          </header>
-        )}
-
-        <main className="flex-1 overflow-y-auto flex flex-col">
-          <div className="mx-auto flex w-full max-w-[70ch] gap-4 p-2 sm:p-4 transition-all duration-200 flex-1">
-            <div className="flex flex-1 flex-col min-w-0">
-              <TabsContent value="answer" className="flex flex-1 flex-col m-0 min-h-0 relative">
-                <MessageList 
-                  messages={messages} 
-                  citationsMap={citationsMap} 
-                  onCitationClick={handleCitationClick}
-                  onExampleQuestionClick={handleSendMessage}
-                />
-              </TabsContent>
-              <TabsContent value="sources" className="flex flex-col m-0 p-4">
-                {allSources.length === 0 ? (
-                  <div className="flex h-full items-center justify-center" role="status" aria-label="No sources">
-                    <div className="text-center animate-in fade-in duration-300">
-                      <p className="text-lg font-medium text-muted-foreground">
-                        No sources available
-                      </p>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Sources will appear here after you ask a question
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <h2 className="text-lg font-semibold mb-2">All Sources</h2>
-                    <div className="flex flex-col gap-3">
-                      {allSources.map((source) => (
-                        <SourceListItem
-                          key={source.chunkId}
-                          source={source}
-                          isHighlighted={highlightedCitation === source.citationNumber}
-                          onClick={() => {
-                            const element = document.getElementById(`citation-${source.citationNumber}`);
-                            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-              <ChatInput
-                onSendMessage={handleSendMessage}
-                disabled={isLoading}
-                placeholder="Ask a question..."
-                sidebarOpen={false}
-              />
-            </div>
-
-            {showUserContextForm && (
-              <aside
-                className="w-full sm:w-80 animate-in slide-in-from-right duration-300 md:block"
-                role="complementary"
-                aria-label="User profile settings"
-              >
-                <UserContextForm
-                  onContextChange={handleContextChange}
-                  initialContext={userContext || undefined}
-                />
-              </aside>
+    <div className="flex h-screen flex-col relative overflow-x-hidden w-full">
+      <main className="flex flex-1 gap-4 p-2 sm:p-4 transition-all duration-200 overflow-x-hidden w-full min-w-0">
+        <div className="flex flex-1 flex-col min-w-0 w-full max-w-6xl mx-auto">
+          <Card className="flex flex-1 flex-col overflow-hidden transition-shadow duration-200 hover:shadow-lg">
+            {hasCompletedAssistantMessage ? (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col h-full">
+                <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border">
+                  <TabsList className="w-full justify-start rounded-none bg-transparent h-auto p-0 gap-0">
+                    <TabsTrigger
+                      value="answer"
+                      className="rounded-none data-[state=active]:bg-background data-[state=active]:shadow-none px-4 py-3 border-r border-border/50"
+                    >
+                      Answer
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="sources"
+                      className="rounded-none data-[state=active]:bg-background data-[state=active]:shadow-none px-4 py-3"
+                    >
+                      Sources
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <TabsContent value="answer" className="flex-1 overflow-y-auto p-4 sm:p-6 mt-0">
+                  <MessageList messages={messages} citationsMap={citationsMap} onCitationClick={handleCitationClick} />
+                </TabsContent>
+                <TabsContent 
+                  value="sources" 
+                  className="flex-1 overflow-y-auto p-4 sm:p-6 mt-0"
+                >
+                  <SourceCards citations={allSources} highlightedCitation={highlightedCitation} />
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <MessageList messages={messages} citationsMap={citationsMap} onCitationClick={handleCitationClick} />
+              </div>
             )}
-          </div>
-        </main>
-      </Tabs>
+          </Card>
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            disabled={isLoading}
+            placeholder="Ask a question..."
+          />
+        </div>
+
+        {showUserContextForm && (
+          <aside
+            className="w-full sm:w-80 animate-in slide-in-from-right duration-300 md:block"
+            role="complementary"
+            aria-label="User profile settings"
+          >
+            <UserContextForm
+              onContextChange={handleContextChange}
+              initialContext={userContext || undefined}
+            />
+          </aside>
+        )}
+      </main>
     </div>
   );
 };

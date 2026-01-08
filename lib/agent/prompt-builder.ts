@@ -18,7 +18,7 @@ interface PromptSections {
 }
 
 /**
- * Build system instructions based on user role
+ * Build system instructions based on user role and preferences
  */
 const buildSystemInstructions = (userContext?: UserContext): string => {
   const role = userContext?.role || 'user';
@@ -44,15 +44,102 @@ const buildSystemInstructions = (userContext?: UserContext): string => {
   const roleInstruction = roleInstructions[role.toLowerCase()] || roleInstructions.default;
   const levelInstruction = levelInstructions[level] || levelInstructions.default;
 
-  return `${roleInstruction} ${levelInstruction}
+  // Build style instructions based on communication preferences
+  const styleInstructions: string[] = [];
+
+  // Communication style
+  if (userContext?.communicationStyle === 'concise') {
+    styleInstructions.push('Provide brief, to-the-point answers. Avoid unnecessary elaboration.');
+  } else if (userContext?.communicationStyle === 'detailed') {
+    styleInstructions.push('Provide comprehensive, thorough explanations with full context.');
+  } else if (userContext?.communicationStyle === 'balanced') {
+    styleInstructions.push('Provide balanced explanations that are neither too brief nor overly verbose.');
+  }
+
+  // Technical depth
+  if (userContext?.technicalDepth) {
+    const depthMap: Record<string, string> = {
+      beginner: 'Use simple language and explain all technical terms. Assume minimal prior knowledge.',
+      intermediate: 'Assume familiarity with common concepts but explain advanced topics in detail.',
+      advanced: 'Use technical terminology freely and focus on nuanced details and best practices.',
+      expert: 'Provide deep technical insights, advanced strategies, and expert-level analysis.',
+    };
+    styleInstructions.push(depthMap[userContext.technicalDepth]);
+  }
+
+  // Tone
+  if (userContext?.tone === 'formal') {
+    styleInstructions.push('Maintain a formal, professional tone throughout your responses.');
+  } else if (userContext?.tone === 'casual') {
+    styleInstructions.push('Use a friendly, conversational tone while remaining professional.');
+  } else if (userContext?.tone === 'professional') {
+    styleInstructions.push('Maintain a professional yet approachable tone.');
+  }
+
+  // Response format
+  if (userContext?.preferredFormat === 'bullet_points') {
+    styleInstructions.push('Format responses as bullet points or lists when possible for clarity.');
+  } else if (userContext?.preferredFormat === 'step_by_step') {
+    styleInstructions.push('Break down complex topics into clear, numbered step-by-step instructions.');
+  } else if (userContext?.preferredFormat === 'structured') {
+    styleInstructions.push('Use structured formatting with clear sections and headings.');
+  } else if (userContext?.preferredFormat === 'narrative') {
+    styleInstructions.push('Provide responses in a flowing narrative format.');
+  }
+
+  // Examples and code
+  if (userContext?.includeExamples === true) {
+    styleInstructions.push('Include practical examples to illustrate concepts.');
+  }
+  if (userContext?.includeCodeSnippets === true) {
+    styleInstructions.push('Include code snippets or technical examples when relevant.');
+  }
+
+  // Citation detail
+  if (userContext?.citationDetail === 'minimal') {
+    styleInstructions.push('Use minimal citations - only cite when directly quoting or referencing specific information.');
+  } else if (userContext?.citationDetail === 'detailed') {
+    styleInstructions.push('Provide detailed citations with context about the source material.');
+  }
+
+  // Primary goal
+  if (userContext?.primaryGoal) {
+    const goalMap: Record<string, string> = {
+      skill_development: 'Focus on helping the user develop new skills and deepen existing ones.',
+      career_transition: 'Provide guidance relevant to transitioning to new roles or career paths.',
+      role_preparation: 'Tailor responses to help prepare for specific roles or responsibilities.',
+      general_learning: 'Provide educational content that supports general learning objectives.',
+    };
+    styleInstructions.push(goalMap[userContext.primaryGoal]);
+  }
+
+  // Time horizon
+  if (userContext?.timeHorizon === 'immediate') {
+    styleInstructions.push('Focus on actionable, immediate steps the user can take right away.');
+  } else if (userContext?.timeHorizon === 'short_term') {
+    styleInstructions.push('Provide guidance for short-term goals and actions (weeks to months).');
+  } else if (userContext?.timeHorizon === 'long_term') {
+    styleInstructions.push('Provide strategic guidance for long-term career development and planning.');
+  }
+
+  // Combine all instructions
+  const baseInstructions = `${roleInstruction} ${levelInstruction}
 
 Your responses should be:
 - Accurate and based on the provided context
 - Clear and well-structured
-- Cite specific sources when referencing information
-- Helpful and actionable
+- ALWAYS cite sources when referencing information from the provided context using citation markers [1], [2], etc.
+- Helpful and actionable`;
 
-When referencing information from the provided context, use citation markers like [1], [2], etc., corresponding to the chunk identifiers provided.`;
+  const styleSection = styleInstructions.length > 0
+    ? `\n\nAdditional Guidelines:\n${styleInstructions.map((instruction) => `- ${instruction}`).join('\n')}`
+    : '';
+
+  const citationInstruction = userContext?.citationDetail === 'minimal'
+    ? '\n\nIMPORTANT: You MUST use citation markers [1], [2], etc. when referencing specific information from the provided context. Use them sparingly, only when directly quoting or referencing specific information.'
+    : '\n\nIMPORTANT: You MUST use citation markers [1], [2], etc. when referencing ANY information from the provided context. Each citation marker corresponds to the chunk number shown in the "Retrieved Context" section below. For example, if you reference information from the first chunk, use [1]; from the second chunk, use [2], and so on.';
+
+  return `${baseInstructions}${styleSection}${citationInstruction}`;
 };
 
 /**
@@ -65,8 +152,13 @@ const buildUserProfile = (userContext?: UserContext): string => {
 
   const parts: string[] = [];
 
+  // Basic profile
   if (userContext.role) {
     parts.push(`Role: ${userContext.role}`);
+  }
+
+  if (userContext.currentRole) {
+    parts.push(`Current Role: ${userContext.currentRole}`);
   }
 
   if (userContext.level) {
@@ -77,8 +169,57 @@ const buildUserProfile = (userContext?: UserContext): string => {
     parts.push(`Target Job: ${userContext.targetJob}`);
   }
 
+  if (userContext.yearsOfExperience !== undefined) {
+    parts.push(`Years of Experience: ${userContext.yearsOfExperience}`);
+  }
+
+  // Context and background
+  if (userContext.industry) {
+    parts.push(`Industry: ${userContext.industry}`);
+  }
+
+  if (userContext.companySize) {
+    parts.push(`Company Size: ${userContext.companySize}`);
+  }
+
+  // Expertise and skills
+  if (userContext.expertise && userContext.expertise.length > 0) {
+    parts.push(`Expertise: ${userContext.expertise.join(', ')}`);
+  }
+
+  if (userContext.currentSkills && userContext.currentSkills.length > 0) {
+    parts.push(`Current Skills: ${userContext.currentSkills.join(', ')}`);
+  }
+
+  if (userContext.knowledgeGaps && userContext.knowledgeGaps.length > 0) {
+    parts.push(`Knowledge Gaps: ${userContext.knowledgeGaps.join(', ')}`);
+  }
+
+  // Goals
+  if (userContext.primaryGoal) {
+    parts.push(`Primary Goal: ${userContext.primaryGoal.replace(/_/g, ' ')}`);
+  }
+
+  if (userContext.timeHorizon) {
+    parts.push(`Time Horizon: ${userContext.timeHorizon.replace(/_/g, ' ')}`);
+  }
+
+  if (userContext.focusAreas && userContext.focusAreas.length > 0) {
+    parts.push(`Focus Areas: ${userContext.focusAreas.join(', ')}`);
+  }
+
+  // Learning preferences
   if (userContext.learningPreferences && userContext.learningPreferences.length > 0) {
     parts.push(`Learning Preferences: ${userContext.learningPreferences.join(', ')}`);
+  }
+
+  // Localization
+  if (userContext.region) {
+    parts.push(`Region: ${userContext.region}`);
+  }
+
+  if (userContext.language) {
+    parts.push(`Language: ${userContext.language}`);
   }
 
   if (parts.length === 0) {
@@ -116,14 +257,19 @@ const buildRetrievedChunks = (searchResults: SearchResult[]): string => {
       }
 
       const metadataText = metadataParts.length > 0 ? ` (${metadataParts.join(', ')})` : '';
+      const citationNumber = index + 1;
 
-      return `[${index + 1}] Chunk ID: ${chunkId} | Content Type: ${contentType}${metadataText}
-${chunkText}`;
+      return `[${citationNumber}] Chunk ID: ${chunkId} | Content Type: ${contentType}${metadataText}
+${chunkText}
+
+--- Use [${citationNumber}] when referencing the above information ---`;
     })
     .join('\n\n');
 
-  return `Retrieved Context (use citation markers [1], [2], etc. when referencing):
-${chunksText}`;
+  return `Retrieved Context (MUST use citation markers [1], [2], etc. when referencing):
+${chunksText}
+
+REMINDER: When you reference information from any chunk above, you MUST include the corresponding citation marker (e.g., [1], [2], [3]) in your response.`;
 };
 
 /**

@@ -41,7 +41,6 @@ export const CitationTooltip = ({
 
       // Adjust if tooltip would go off-screen
       const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
       const padding = 8;
 
       let adjustedLeft = left;
@@ -153,7 +152,7 @@ export const CitationTooltip = ({
         </div>
       </div>
     ),
-    [citation, position, isVisible]
+    [citation, position, isVisible, onClose]
   );
 
   if (!isVisible || typeof window === 'undefined') {
