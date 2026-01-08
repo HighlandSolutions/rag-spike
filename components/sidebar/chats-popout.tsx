@@ -89,7 +89,8 @@ export const ChatsPopout = ({
 
   const handleSaveRename = async (sessionId: string) => {
     try {
-      await updateChatSession(sessionId, { title: editingTitle.trim() || null });
+      const trimmedTitle = editingTitle.trim();
+      await updateChatSession(sessionId, { title: trimmedTitle || undefined });
       setEditingSessionId(null);
       setEditingTitle('');
       await loadSessions();
