@@ -8,6 +8,7 @@ import { chunkMultipleTexts, type ChunkingConfig } from '@/lib/ingestion/chunkin
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, createChunks, getDocumentsByTenant } from '@/lib/supabase/queries';
 import { getContentType } from '@/lib/ingestion/content-type-config';
+import { parseUrl, validateUrl, type UrlParserConfig } from '@/lib/ingestion/url-parser';
 import type { Document, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ApiError } from '@/types/domain';
 
@@ -29,13 +30,90 @@ const SUPPORTED_FILE_TYPES = ['.pdf', '.csv', '.docx', '.doc', '.xlsx', '.xls', 
 /**
  * Check if document already exists
  */
-const documentExists = async (tenantId: string, fileName: string): Promise<boolean> => {
+const documentExists = async (tenantId: string, sourcePath: string): Promise<boolean> => {
   try {
     const documents = await getDocumentsByTenant(tenantId);
-    return documents.some((doc) => doc.name === fileName);
+    return documents.some((doc) => doc.sourcePath === sourcePath);
   } catch {
     return false;
   }
+};
+
+/**
+ * Process URL and extract content
+ */
+const processUrl = async (
+  url: string,
+  tenantId: string
+): Promise<{ document: Document; chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] }> => {
+  // Validate URL
+  const validation = validateUrl(url);
+  if (!validation.isValid) {
+    throw new Error(validation.error || 'Invalid URL');
+  }
+
+  // Check if URL already exists
+  const exists = await documentExists(tenantId, url);
+  if (exists) {
+    throw new Error(`URL "${url}" has already been ingested`);
+  }
+
+  // Parse URL
+  const urlConfig: UrlParserConfig = {
+    timeout: 30000, // 30 seconds
+  };
+  const parsedUrl = await parseUrl(url, urlConfig);
+
+  // Convert to text chunks format
+  const textItems = [{
+    text: parsedUrl.text,
+    metadata: parsedUrl.metadata,
+  }];
+
+  // Chunk the text
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(textItems, chunkingConfig);
+
+  // Generate embeddings
+  const chunkTexts = textChunks.map((chunk) => chunk.text);
+  const embeddings = await generateEmbeddings(chunkTexts);
+
+  // Get content type
+  const contentType = getContentType(parsedUrl.title || url, '');
+
+  // Create document
+  const document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
+    tenantId,
+    sourcePath: url, // Store URL as sourcePath
+    name: parsedUrl.title || url,
+    contentType,
+    uploadedAt: parsedUrl.fetchedAt,
+  };
+
+  const createdDocument = await createDocument(document);
+
+  // Create chunks with URL metadata
+  const chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] = textChunks.map((chunk, index) => ({
+    tenantId,
+    documentId: createdDocument.id,
+    chunkText: chunk.text,
+    chunkMetadata: {
+      ...chunk.metadata,
+      url: parsedUrl.url,
+      pageTitle: parsedUrl.title,
+      pageDescription: parsedUrl.description,
+      fetchedAt: parsedUrl.fetchedAt.toISOString(),
+      lastModified: parsedUrl.lastModified?.toISOString(),
+    },
+    contentType,
+    embedding: embeddings[index] || null,
+  }));
+
+  return { document: createdDocument, chunks };
 };
 
 /**
@@ -365,12 +443,42 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const url = formData.get('url') as string | null;
     const tenantId = (formData.get('tenant_id') as string) || DEFAULT_TENANT_ID;
 
+    // Handle URL ingestion
+    if (url) {
+      try {
+        const result = await processUrl(url.trim(), tenantId);
+        await createChunks(result.chunks);
+
+        return NextResponse.json(
+          {
+            document: {
+              id: result.document.id,
+              name: result.document.name,
+              contentType: result.document.contentType,
+              uploadedAt: result.document.uploadedAt.toISOString(),
+            },
+            chunksCreated: result.chunks.length,
+          },
+          { status: 201 }
+        );
+      } catch (error) {
+        const apiError: ApiError = {
+          error: 'UrlProcessingError',
+          message: error instanceof Error ? error.message : 'An unknown error occurred while processing the URL',
+          details: error instanceof Error ? { stack: error.stack } : undefined,
+        };
+        return NextResponse.json(apiError, { status: 400 });
+      }
+    }
+
+    // Handle file upload
     if (!file) {
       const error: ApiError = {
         error: 'ValidationError',
-        message: 'No file provided',
+        message: 'No file or URL provided',
       };
       return NextResponse.json(error, { status: 400 });
     }

@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Upload, File, X, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Upload, File, X, Loader2, Link } from 'lucide-react';
 
 interface DocumentUploadProps {
   onUploadSuccess?: () => void;
@@ -25,6 +26,8 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
     success: null,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [url, setUrl] = useState<string>('');
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,7 +65,16 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
+    if (uploadMode === 'file' && !selectedFile) {
+      return;
+    }
+    if (uploadMode === 'url' && !url.trim()) {
+      setUploadState({
+        isUploading: false,
+        progress: 0,
+        error: 'Please enter a valid URL',
+        success: null,
+      });
       return;
     }
 
@@ -75,7 +87,11 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
 
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      if (uploadMode === 'file' && selectedFile) {
+        formData.append('file', selectedFile);
+      } else if (uploadMode === 'url' && url.trim()) {
+        formData.append('url', url.trim());
+      }
       if (tenantId) {
         formData.append('tenant_id', tenantId);
       }
@@ -100,6 +116,7 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
       });
 
       setSelectedFile(null);
+      setUrl('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -169,35 +186,95 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
           <h2 className="text-lg font-semibold">Upload Document</h2>
         </div>
 
-        <div
-          className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center transition-colors hover:border-muted-foreground/50"
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.csv"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="file-upload"
-            disabled={uploadState.isUploading}
-          />
-          <label
-            htmlFor="file-upload"
-            className="cursor-pointer flex flex-col items-center gap-2"
+        {/* Upload mode toggle */}
+        <div className="flex gap-2 border-b">
+          <button
+            type="button"
+            onClick={() => {
+              setUploadMode('file');
+              setUploadState({ isUploading: false, progress: 0, error: null, success: null });
+            }}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              uploadMode === 'file'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <Upload className="h-12 w-12 text-muted-foreground" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                Click to upload or drag and drop
-              </p>
-              <p className="text-xs text-muted-foreground">
-                PDF or CSV files (max 50MB)
-              </p>
-            </div>
-          </label>
+            File Upload
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setUploadMode('url');
+              setUploadState({ isUploading: false, progress: 0, error: null, success: null });
+            }}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              uploadMode === 'url'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            URL
+          </button>
         </div>
+
+        {uploadMode === 'file' ? (
+          <div
+            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center transition-colors hover:border-muted-foreground/50"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.csv,.docx,.doc,.xlsx,.xls,.pptx,.ppt"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-upload"
+              disabled={uploadState.isUploading}
+            />
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer flex flex-col items-center gap-2"
+            >
+              <Upload className="h-12 w-12 text-muted-foreground" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PDF, CSV, Word, Excel, or PowerPoint files (max 50MB)
+                </p>
+              </div>
+            </label>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label htmlFor="url-input" className="text-sm font-medium">
+              Enter URL
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="url-input"
+                  type="url"
+                  placeholder="https://example.com/article"
+                  value={url}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    setUploadState({ isUploading: false, progress: 0, error: null, success: null });
+                  }}
+                  disabled={uploadState.isUploading}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enter a valid HTTP or HTTPS URL to scrape and ingest content
+            </p>
+          </div>
+        )}
 
         {selectedFile && (
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
@@ -234,18 +311,27 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
 
         <Button
           onClick={handleUpload}
-          disabled={!selectedFile || uploadState.isUploading}
+          disabled={(uploadMode === 'file' && !selectedFile) || (uploadMode === 'url' && !url.trim()) || uploadState.isUploading}
           className="w-full"
         >
           {uploadState.isUploading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
+              {uploadMode === 'url' ? 'Processing URL...' : 'Uploading...'}
             </>
           ) : (
             <>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Document
+              {uploadMode === 'url' ? (
+                <>
+                  <Link className="mr-2 h-4 w-4" />
+                  Ingest URL
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Document
+                </>
+              )}
             </>
           )}
         </Button>

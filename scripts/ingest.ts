@@ -10,17 +10,18 @@
  * 4. Stores chunks in Supabase
  */
 
-import { discoverFiles, validateFile, getContentTypeFromFile, type DiscoveredFile } from '@/lib/ingestion/file-discovery';
+import { discoverFiles, validateFile, getContentTypeFromFile, type DiscoveredFile, discoverUrls, parseUrlsFromFile, createDiscoveredUrl, type DiscoveredUrl } from '@/lib/ingestion/file-discovery';
 import { parsePdf } from '@/lib/ingestion/pdf-parser';
 import { parseCsv } from '@/lib/ingestion/csv-parser';
 import { parseWord } from '@/lib/ingestion/word-parser';
 import { parseExcel } from '@/lib/ingestion/excel-parser';
 import { parsePowerPoint } from '@/lib/ingestion/powerpoint-parser';
+import { parseUrl, extractDomain, type UrlParserConfig } from '@/lib/ingestion/url-parser';
 import { chunkMultipleTexts, estimateTokenCount, type ChunkingConfig } from '@/lib/ingestion/chunking';
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, getDocumentsByTenant, createChunks } from '@/lib/supabase/queries';
 import { testDatabaseConnection } from '@/lib/supabase/client';
-import { loadContentTypeConfig, type ContentTypeConfig } from '@/lib/ingestion/content-type-config';
+import { loadContentTypeConfig, getContentType, type ContentTypeConfig } from '@/lib/ingestion/content-type-config';
 import type { Document, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import { join } from 'path';
 
@@ -35,6 +36,11 @@ interface IngestionConfig {
   contentTypeConfig?: ContentTypeConfig;
   useSemanticChunking?: boolean;
   chunkingConfig?: ChunkingConfig;
+  // URL ingestion options
+  url?: string; // Single URL to ingest
+  urlsFile?: string; // Path to file containing URLs (one per line)
+  urlTimeout?: number; // Timeout for URL fetching (default: 30000ms)
+  urlRateLimitDelay?: number; // Delay between requests to same domain (default: 1000ms)
 }
 
 /**
@@ -46,6 +52,9 @@ interface IngestionStats {
   filesFailed: number;
   documentsCreated: number;
   chunksCreated: number;
+  urlsProcessed: number;
+  urlsSkipped: number;
+  urlsFailed: number;
   errors: Array<{ file: string; error: string }>;
 }
 
@@ -73,6 +82,20 @@ const parseArgs = (): IngestionConfig => {
       config.contentTypeConfigPath = arg.split('=')[1];
     } else if (arg === '--no-skip-existing') {
       config.skipExisting = false;
+    } else if (arg.startsWith('--url=')) {
+      config.url = arg.split('=')[1];
+    } else if (arg.startsWith('--urls-file=')) {
+      config.urlsFile = arg.split('=')[1];
+    } else if (arg.startsWith('--url-timeout=')) {
+      const timeout = parseInt(arg.split('=')[1], 10);
+      if (!isNaN(timeout) && timeout > 0) {
+        config.urlTimeout = timeout;
+      }
+    } else if (arg.startsWith('--url-rate-limit-delay=')) {
+      const delay = parseInt(arg.split('=')[1], 10);
+      if (!isNaN(delay) && delay >= 0) {
+        config.urlRateLimitDelay = delay;
+      }
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Document Ingestion CLI
@@ -84,6 +107,10 @@ Options:
   --content-dir=<path>          Content directory (default: ./content)
   --content-type-config=<path>  Path to content type configuration JSON file
   --no-skip-existing           Re-ingest files that were already processed
+  --url=<url>                   Ingest a single URL
+  --urls-file=<path>            Path to file containing URLs (one per line)
+  --url-timeout=<ms>            Timeout for URL fetching in milliseconds (default: 30000)
+  --url-rate-limit-delay=<ms>   Delay between requests to same domain in milliseconds (default: 1000)
   --help, -h                    Show this help message
 
 Environment Variables:
@@ -428,6 +455,73 @@ const processPowerPointFile = async (
 };
 
 /**
+ * Process a URL
+ */
+const processUrl = async (
+  discoveredUrl: DiscoveredUrl,
+  tenantId: string,
+  contentType: string,
+  contentTypeConfig?: ContentTypeConfig,
+  urlConfig?: UrlParserConfig
+): Promise<{ document: Document; chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] }> => {
+  console.log(`  Fetching URL: ${discoveredUrl.url}...`);
+  const parsedUrl = await parseUrl(discoveredUrl.url, urlConfig);
+
+  console.log(`  Extracted content from: ${parsedUrl.title}`);
+
+  // Convert to text chunks format
+  const textItems = [{
+    text: parsedUrl.text,
+    metadata: parsedUrl.metadata,
+  }];
+
+  console.log(`  Chunking text...`);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(textItems, chunkingConfig);
+
+  console.log(`  Created ${textChunks.length} chunks`);
+
+  // Generate embeddings
+  console.log(`  Generating embeddings...`);
+  const chunkTexts = textChunks.map((chunk) => chunk.text);
+  const embeddings = await generateEmbeddings(chunkTexts);
+
+  // Create document
+  const document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
+    tenantId,
+    sourcePath: discoveredUrl.url, // Store URL as sourcePath
+    name: parsedUrl.title || discoveredUrl.url,
+    contentType,
+    uploadedAt: parsedUrl.fetchedAt,
+  };
+
+  const createdDocument = await createDocument(document);
+
+  // Create chunks with URL metadata
+  const chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] = textChunks.map((chunk, index) => ({
+    tenantId,
+    documentId: createdDocument.id,
+    chunkText: chunk.text,
+    chunkMetadata: {
+      ...chunk.metadata,
+      url: parsedUrl.url,
+      pageTitle: parsedUrl.title,
+      pageDescription: parsedUrl.description,
+      fetchedAt: parsedUrl.fetchedAt.toISOString(),
+      lastModified: parsedUrl.lastModified?.toISOString(),
+    },
+    contentType,
+    embedding: embeddings[index] || null,
+  }));
+
+  return { document: createdDocument, chunks };
+};
+
+/**
  * Process a single file
  */
 const processFile = async (
@@ -507,29 +601,69 @@ const ingest = async (): Promise<void> => {
     process.exit(1);
   }
 
-  // Discover files
+  // Discover files and URLs
   console.log('Discovering files...');
-  let files: DiscoveredFile[];
+  let files: DiscoveredFile[] = [];
+  let urls: DiscoveredUrl[] = [];
+
   try {
     files = await discoverFiles(config.contentDir);
-    console.log(`Found ${files.length} file(s)\n`);
+    console.log(`Found ${files.length} file(s)`);
   } catch (error) {
     console.error('❌ Failed to discover files:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
   }
 
-  if (files.length === 0) {
-    console.log('No files to process. Exiting.');
+  // Handle URL ingestion options
+  if (config.url) {
+    // Single URL from CLI
+    try {
+      const discoveredUrl = createDiscoveredUrl(config.url);
+      urls.push(discoveredUrl);
+      console.log(`Found 1 URL from --url flag`);
+    } catch (error) {
+      console.error('❌ Invalid URL:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  } else if (config.urlsFile) {
+    // URLs from file
+    try {
+      urls = await parseUrlsFromFile(config.urlsFile);
+      console.log(`Found ${urls.length} URL(s) from ${config.urlsFile}`);
+    } catch (error) {
+      console.error('❌ Failed to parse URLs file:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  } else {
+    // Discover URLs from .urls files in content directory
+    try {
+      const discoveredUrls = await discoverUrls(config.contentDir);
+      urls.push(...discoveredUrls);
+      if (discoveredUrls.length > 0) {
+        console.log(`Found ${discoveredUrls.length} URL(s) from .urls files`);
+      }
+    } catch (error) {
+      console.warn('⚠️  Failed to discover URLs:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  console.log('');
+
+  if (files.length === 0 && urls.length === 0) {
+    console.log('No files or URLs to process. Exiting.');
     return;
   }
 
-  // Process files
+  // Process files and URLs
   const stats: IngestionStats = {
     filesProcessed: 0,
     filesSkipped: 0,
     filesFailed: 0,
     documentsCreated: 0,
     chunksCreated: 0,
+    urlsProcessed: 0,
+    urlsSkipped: 0,
+    urlsFailed: 0,
     errors: [],
   };
 
@@ -563,11 +697,74 @@ const ingest = async (): Promise<void> => {
     }
   }
 
+  // Process URLs with rate limiting
+  if (urls.length > 0) {
+    console.log('Processing URLs...\n');
+    const urlConfig: UrlParserConfig = {
+      timeout: config.urlTimeout || 30000,
+    };
+    const rateLimitDelay = config.urlRateLimitDelay || 1000; // Default 1 second between requests to same domain
+    const domainLastRequest: Record<string, number> = {}; // Track last request time per domain
+
+    for (let i = 0; i < urls.length; i++) {
+      const discoveredUrl = urls[i];
+      const domain = extractDomain(discoveredUrl.url);
+      console.log(`[${i + 1}/${urls.length}] Processing URL: ${discoveredUrl.url}`);
+
+      // Rate limiting: wait if we've recently made a request to this domain
+      if (domainLastRequest[domain]) {
+        const timeSinceLastRequest = Date.now() - domainLastRequest[domain];
+        if (timeSinceLastRequest < rateLimitDelay) {
+          const waitTime = rateLimitDelay - timeSinceLastRequest;
+          console.log(`  ⏳ Rate limiting: waiting ${waitTime}ms before next request to ${domain}...`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+      }
+
+      try {
+        // Check if URL already exists (idempotency)
+        if (config.skipExisting) {
+          const exists = await documentExists(config.tenantId, discoveredUrl.url);
+          if (exists) {
+            stats.urlsSkipped++;
+            console.log(`  ⏭️  Skipping ${discoveredUrl.url} (already ingested)\n`);
+            continue;
+          }
+        }
+
+        const contentType = getContentType(discoveredUrl.url, '', config.contentTypeConfig);
+        const result = await processUrl(discoveredUrl, config.tenantId, contentType, config.contentTypeConfig, urlConfig);
+
+        // Update domain last request time
+        domainLastRequest[domain] = Date.now();
+
+        // Store chunks in database
+        console.log(`  Storing ${result.chunks.length} chunks in database...`);
+        await createChunks(result.chunks);
+
+        stats.urlsProcessed++;
+        stats.documentsCreated++;
+        stats.chunksCreated += result.chunks.length;
+
+        const totalTokens = result.chunks.reduce((sum, chunk) => sum + estimateTokenCount(chunk.chunkText), 0);
+        console.log(`  ✅ Successfully ingested (${result.chunks.length} chunks, ~${totalTokens} tokens)\n`);
+      } catch (error) {
+        stats.urlsFailed++;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        stats.errors.push({ file: discoveredUrl.url, error: errorMessage });
+        console.error(`  ❌ Failed: ${errorMessage}\n`);
+      }
+    }
+  }
+
   // Print summary
   console.log('📊 Ingestion Summary:');
   console.log(`  Files processed: ${stats.filesProcessed}`);
   console.log(`  Files skipped: ${stats.filesSkipped}`);
   console.log(`  Files failed: ${stats.filesFailed}`);
+  console.log(`  URLs processed: ${stats.urlsProcessed}`);
+  console.log(`  URLs skipped: ${stats.urlsSkipped}`);
+  console.log(`  URLs failed: ${stats.urlsFailed}`);
   console.log(`  Documents created: ${stats.documentsCreated}`);
   console.log(`  Chunks created: ${stats.chunksCreated}`);
 

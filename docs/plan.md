@@ -431,43 +431,43 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [x] Add support for PowerPoint presentations (.pptx, .ppt)
 
 ### Phase 14: Single URL Ingestion & Web Scraping
-- [ ] Install web scraping dependencies (cheerio, @mozilla/readability, jsdom, node-fetch)
-- [ ] Create URL parser utility (`lib/ingestion/url-parser.ts`)
-  - [ ] Implement URL fetching with timeout and error handling
-  - [ ] Extract HTML content from URLs
-  - [ ] Use Readability or similar to extract main content (remove nav, ads, etc.)
-  - [ ] Convert HTML to clean text while preserving structure
-  - [ ] Extract metadata (page title, description, last modified date)
-  - [ ] Handle redirects, 404s, and network errors gracefully
-- [ ] Extend file discovery to support URLs
-  - [ ] Support `.urls` text files (one URL per line)
-  - [ ] Support direct URL input via CLI argument
-  - [ ] Validate URL format before processing
-  - [ ] Track URL as `sourcePath` in database
-- [ ] Create URL processor function
-  - [ ] Integrate with existing `processFile` pattern
-  - [ ] Chunk extracted text content (reuse existing chunking logic)
-  - [ ] Generate embeddings for URL content
-  - [ ] Store URL metadata (original URL, page title, fetched timestamp)
-- [ ] Update ingestion CLI script
-  - [ ] Add `--url` flag for single URL ingestion
-  - [ ] Add `--urls-file` flag for batch URL ingestion
-  - [ ] Support URL list files in content directory
-  - [ ] Add idempotency check for URLs (skip already-ingested URLs)
-- [ ] Add URL ingestion to document upload API
-  - [ ] Support URL input in document upload UI
-  - [ ] Validate URLs before processing
-  - [ ] Return appropriate error messages for invalid URLs
-- [ ] Handle edge cases
-  - [ ] Rate limiting for multiple URLs from same domain
-  - [ ] Timeout handling (default 30 seconds)
-  - [ ] User-Agent header configuration
+- [x] Install web scraping dependencies (cheerio, @mozilla/readability, jsdom, node-fetch)
+- [x] Create URL parser utility (`lib/ingestion/url-parser.ts`)
+  - [x] Implement URL fetching with timeout and error handling
+  - [x] Extract HTML content from URLs
+  - [x] Use Readability or similar to extract main content (remove nav, ads, etc.)
+  - [x] Convert HTML to clean text while preserving structure
+  - [x] Extract metadata (page title, description, last modified date)
+  - [x] Handle redirects, 404s, and network errors gracefully
+- [x] Extend file discovery to support URLs
+  - [x] Support `.urls` text files (one URL per line)
+  - [x] Support direct URL input via CLI argument
+  - [x] Validate URL format before processing
+  - [x] Track URL as `sourcePath` in database
+- [x] Create URL processor function
+  - [x] Integrate with existing `processFile` pattern
+  - [x] Chunk extracted text content (reuse existing chunking logic)
+  - [x] Generate embeddings for URL content
+  - [x] Store URL metadata (original URL, page title, fetched timestamp)
+- [x] Update ingestion CLI script
+  - [x] Add `--url` flag for single URL ingestion
+  - [x] Add `--urls-file` flag for batch URL ingestion
+  - [x] Support URL list files in content directory
+  - [x] Add idempotency check for URLs (skip already-ingested URLs)
+- [x] Add URL ingestion to document upload API
+  - [x] Support URL input in document upload UI
+  - [x] Validate URLs before processing
+  - [x] Return appropriate error messages for invalid URLs
+- [x] Handle edge cases
+  - [x] Rate limiting for multiple URLs from same domain
+  - [x] Timeout handling (default 30 seconds)
+  - [x] User-Agent header configuration
   - [ ] Handle JavaScript-rendered content (optional, for future)
-- [ ] Add URL metadata to chunk metadata
-  - [ ] Store original URL in chunk metadata
-  - [ ] Store page title and description
-  - [ ] Store fetch timestamp for freshness tracking
-  - [ ] Support re-fetching URLs for updates
+- [x] Add URL metadata to chunk metadata
+  - [x] Store original URL in chunk metadata
+  - [x] Store page title and description
+  - [x] Store fetch timestamp for freshness tracking
+  - [x] Support re-fetching URLs for updates
 
 ---
 
