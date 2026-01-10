@@ -10,7 +10,7 @@ import { getContentType, type ContentTypeConfig } from './content-type-config';
 /**
  * Supported file types for ingestion
  */
-export const SUPPORTED_FILE_TYPES = ['.pdf', '.csv'] as const;
+export const SUPPORTED_FILE_TYPES = ['.pdf', '.csv', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'] as const;
 
 export type SupportedFileType = (typeof SUPPORTED_FILE_TYPES)[number];
 
