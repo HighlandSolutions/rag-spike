@@ -426,10 +426,9 @@ This plan breaks down the Perplexity-style Q&A application into iterative phases
 - [x] Add query expansion/rewriting
 
 ### Phase 13: Extended File Type Support
-- [ ] Add support for Word documents (.docx, .doc)
-- [ ] Add support for Excel spreadsheets (.xlsx, .xls)
-- [ ] Add support for PowerPoint presentations (.pptx, .ppt)
-- [ ] Add support for HTML files (.html, .htm)
+- [x] Add support for Word documents (.docx, .doc)
+- [x] Add support for Excel spreadsheets (.xlsx, .xls)
+- [x] Add support for PowerPoint presentations (.pptx, .ppt)
 
 ### Phase 14: Single URL Ingestion & Web Scraping
 - [ ] Install web scraping dependencies (cheerio, @mozilla/readability, jsdom, node-fetch)

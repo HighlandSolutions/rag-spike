@@ -24,7 +24,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 /**
  * Supported file types
  */
-const SUPPORTED_FILE_TYPES = ['.pdf', '.csv'] as const;
+const SUPPORTED_FILE_TYPES = ['.pdf', '.csv', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'] as const;
 
 /**
  * Check if document already exists
@@ -46,7 +46,22 @@ const processFileBuffer = async (
   fileName: string,
   tenantId: string
 ): Promise<{ document: Document; chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] }> => {
-  const extension = fileName.toLowerCase().endsWith('.pdf') ? '.pdf' : '.csv';
+  // Determine file extension
+  const lowerFileName = fileName.toLowerCase();
+  let extension: string | null = null;
+  if (lowerFileName.endsWith('.pdf')) extension = '.pdf';
+  else if (lowerFileName.endsWith('.csv')) extension = '.csv';
+  else if (lowerFileName.endsWith('.docx')) extension = '.docx';
+  else if (lowerFileName.endsWith('.doc')) extension = '.doc';
+  else if (lowerFileName.endsWith('.xlsx')) extension = '.xlsx';
+  else if (lowerFileName.endsWith('.xls')) extension = '.xls';
+  else if (lowerFileName.endsWith('.pptx')) extension = '.pptx';
+  else if (lowerFileName.endsWith('.ppt')) extension = '.ppt';
+
+  if (!extension) {
+    throw new Error(`Unsupported file type: ${fileName}`);
+  }
+
   const contentType = getContentType(fileName, extension);
 
   // Check if document already exists
@@ -55,7 +70,12 @@ const processFileBuffer = async (
     throw new Error(`Document "${fileName}" already exists`);
   }
 
-  let parsedData: { pages?: Array<{ text: string; metadata: ChunkMetadata }>; rows?: Array<{ text: string; metadata: ChunkMetadata }> };
+  let parsedData: {
+    pages?: Array<{ text: string; metadata: ChunkMetadata }>;
+    rows?: Array<{ text: string; metadata: ChunkMetadata }>;
+    sections?: Array<{ text: string; metadata: ChunkMetadata }>;
+    slides?: Array<{ text: string; metadata: ChunkMetadata }>;
+  };
 
   if (extension === '.pdf') {
     // Parse PDF from buffer
@@ -99,7 +119,7 @@ const processFileBuffer = async (
     }
 
     parsedData = { pages };
-  } else {
+  } else if (extension === '.csv') {
     // Parse CSV from buffer
     const csvContent = fileBuffer.toString('utf-8');
     const { parse } = await import('csv-parse/sync');
@@ -127,10 +147,181 @@ const processFileBuffer = async (
         } as ChunkMetadata,
       })),
     };
+  } else if (extension === '.docx' || extension === '.doc') {
+    // Parse Word document from buffer
+    // Note: .doc (old format) is not supported by mammoth, only .docx
+    if (extension === '.doc') {
+      throw new Error('Legacy .doc format is not supported. Please convert to .docx format.');
+    }
+
+    const mammoth = await import('mammoth');
+    const result = await mammoth.default.extractRawText({ buffer: fileBuffer });
+    const fullText = result.value.trim();
+
+    if (!fullText) {
+      throw new Error(`Word document ${fileName} appears to be empty or contains no extractable text`);
+    }
+
+    // Split text into sections by paragraphs
+    const paragraphs = fullText.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+    parsedData = {
+      sections: paragraphs.map((paragraph, index) => ({
+        text: paragraph.trim(),
+        metadata: {
+          sectionIndex: index + 1,
+          fileName,
+          sourceLocation: `uploaded/${fileName}`,
+        } as ChunkMetadata,
+      })),
+    };
+  } else if (extension === '.xlsx' || extension === '.xls') {
+    // Parse Excel from buffer
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+      throw new Error(`Excel file ${fileName} contains no sheets`);
+    }
+
+    const rows: Array<{ text: string; metadata: ChunkMetadata }> = [];
+
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) {
+        continue;
+      }
+
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: '',
+        raw: false,
+      }) as unknown[][];
+
+      if (!Array.isArray(jsonData) || jsonData.length === 0) {
+        continue;
+      }
+
+      const headers = (jsonData[0] || []).map((cell) => String(cell || '').trim()).filter((h) => h);
+
+      for (let rowIndex = 1; rowIndex < jsonData.length; rowIndex++) {
+        const row = jsonData[rowIndex];
+        if (!Array.isArray(row)) {
+          continue;
+        }
+
+        const rowText = row
+          .map((cell, colIndex) => {
+            const header = headers[colIndex] || `Column${colIndex + 1}`;
+            const value = String(cell || '').trim();
+            return value ? `${header}: ${value}` : null;
+          })
+          .filter((item) => item !== null)
+          .join('\n');
+
+        if (rowText.trim()) {
+          rows.push({
+            text: rowText,
+            metadata: {
+              sheetName,
+              rowIndex: rowIndex + 1,
+              columnNames: headers,
+              fileName,
+              sourceLocation: `uploaded/${fileName}`,
+            } as ChunkMetadata,
+          });
+        }
+      }
+    }
+
+    if (rows.length === 0) {
+      throw new Error(`Excel file ${fileName} contains no data rows`);
+    }
+
+    parsedData = { rows };
+  } else if (extension === '.pptx' || extension === '.ppt') {
+    // Parse PowerPoint from buffer
+    // Note: .ppt (old format) is not supported, only .pptx
+    if (extension === '.ppt') {
+      throw new Error('Legacy .ppt format is not supported. Please convert to .pptx format.');
+    }
+
+    const PPTX2Json = (await import('pptx2json')).default;
+    const pptx2json = new PPTX2Json();
+    const json = await pptx2json.buffer2json(fileBuffer);
+
+    if (!json || typeof json !== 'object') {
+      throw new Error(`PowerPoint file ${fileName} could not be parsed`);
+    }
+
+    // Extract text from slides
+    const extractTextFromSlideJson = (slideJson: unknown): string => {
+      if (!slideJson || typeof slideJson !== 'object') {
+        return '';
+      }
+
+      const textParts: string[] = [];
+      const extractText = (obj: unknown): void => {
+        if (typeof obj === 'string') {
+          const cleaned = obj
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .trim();
+          if (cleaned) {
+            textParts.push(cleaned);
+          }
+        } else if (Array.isArray(obj)) {
+          obj.forEach((item) => extractText(item));
+        } else if (obj && typeof obj === 'object') {
+          Object.values(obj).forEach((value) => extractText(value));
+        }
+      };
+
+      extractText(slideJson);
+      return textParts.join(' ').trim();
+    };
+
+    const slidePaths = Object.keys(json).filter((path) => 
+      path.startsWith('ppt/slides/slide') && path.endsWith('.xml')
+    );
+
+    slidePaths.sort((a, b) => {
+      const aNum = parseInt(a.match(/slide(\d+)\.xml/)?.[1] || '0', 10);
+      const bNum = parseInt(b.match(/slide(\d+)\.xml/)?.[1] || '0', 10);
+      return aNum - bNum;
+    });
+
+    const slides: Array<{ text: string; metadata: ChunkMetadata }> = [];
+    for (let i = 0; i < slidePaths.length; i++) {
+      const slidePath = slidePaths[i];
+      const slideJson = (json as Record<string, unknown>)[slidePath];
+      const slideText = extractTextFromSlideJson(slideJson);
+
+      if (slideText) {
+        slides.push({
+          text: slideText,
+          metadata: {
+            slideNumber: i + 1,
+            fileName,
+            sourceLocation: `uploaded/${fileName}`,
+          } as ChunkMetadata,
+        });
+      }
+    }
+
+    if (slides.length === 0) {
+      throw new Error(`PowerPoint file ${fileName} contains no extractable text`);
+    }
+
+    parsedData = { slides };
+  } else {
+    throw new Error(`Unsupported file type: ${extension}`);
   }
 
   // Chunk the text
-  const textItems = parsedData.pages || parsedData.rows || [];
+  const textItems = parsedData.pages || parsedData.rows || parsedData.sections || parsedData.slides || [];
   const chunkingConfig: ChunkingConfig = {
     chunkSize: 2000,
     overlap: 200,
@@ -195,9 +386,18 @@ export async function POST(request: NextRequest) {
 
     // Validate file type
     const fileName = file.name;
-    const extension = fileName.toLowerCase().endsWith('.pdf') ? '.pdf' : fileName.toLowerCase().endsWith('.csv') ? '.csv' : null;
+    const lowerFileName = fileName.toLowerCase();
+    let extension: string | null = null;
+    if (lowerFileName.endsWith('.pdf')) extension = '.pdf';
+    else if (lowerFileName.endsWith('.csv')) extension = '.csv';
+    else if (lowerFileName.endsWith('.docx')) extension = '.docx';
+    else if (lowerFileName.endsWith('.doc')) extension = '.doc';
+    else if (lowerFileName.endsWith('.xlsx')) extension = '.xlsx';
+    else if (lowerFileName.endsWith('.xls')) extension = '.xls';
+    else if (lowerFileName.endsWith('.pptx')) extension = '.pptx';
+    else if (lowerFileName.endsWith('.ppt')) extension = '.ppt';
 
-    if (!extension || !SUPPORTED_FILE_TYPES.includes(extension)) {
+    if (!extension || !SUPPORTED_FILE_TYPES.includes(extension as typeof SUPPORTED_FILE_TYPES[number])) {
       const error: ApiError = {
         error: 'ValidationError',
         message: `Unsupported file type. Supported types: ${SUPPORTED_FILE_TYPES.join(', ')}`,

@@ -13,6 +13,9 @@
 import { discoverFiles, validateFile, getContentTypeFromFile, type DiscoveredFile } from '@/lib/ingestion/file-discovery';
 import { parsePdf } from '@/lib/ingestion/pdf-parser';
 import { parseCsv } from '@/lib/ingestion/csv-parser';
+import { parseWord } from '@/lib/ingestion/word-parser';
+import { parseExcel } from '@/lib/ingestion/excel-parser';
+import { parsePowerPoint } from '@/lib/ingestion/powerpoint-parser';
 import { chunkMultipleTexts, estimateTokenCount, type ChunkingConfig } from '@/lib/ingestion/chunking';
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, getDocumentsByTenant, createChunks } from '@/lib/supabase/queries';
@@ -248,6 +251,183 @@ const processCsvFile = async (
 };
 
 /**
+ * Process a Word document
+ */
+const processWordFile = async (
+  file: DiscoveredFile,
+  tenantId: string,
+  contentType: string,
+  contentTypeConfig?: ContentTypeConfig
+): Promise<{ document: Document; chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] }> => {
+  console.log(`  Parsing Word document: ${file.name}...`);
+  const parsedWord = await parseWord(file.path, file.name);
+
+  console.log(`  Extracted ${parsedWord.totalSections} sections`);
+
+  // Convert sections to text chunks
+  const sectionTexts = parsedWord.sections.map((section) => ({
+    text: section.text,
+    metadata: section.metadata,
+  }));
+
+  console.log(`  Chunking text...`);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(sectionTexts, chunkingConfig);
+
+  console.log(`  Created ${textChunks.length} chunks`);
+
+  // Generate embeddings
+  console.log(`  Generating embeddings...`);
+  const chunkTexts = textChunks.map((chunk) => chunk.text);
+  const embeddings = await generateEmbeddings(chunkTexts);
+
+  // Create document
+  const document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
+    tenantId,
+    sourcePath: file.path,
+    name: file.name,
+    contentType,
+    uploadedAt: new Date(),
+  };
+
+  const createdDocument = await createDocument(document);
+
+  // Create chunks
+  const chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] = textChunks.map((chunk, index) => ({
+    tenantId,
+    documentId: createdDocument.id,
+    chunkText: chunk.text,
+    chunkMetadata: chunk.metadata,
+    contentType,
+    embedding: embeddings[index] || null,
+  }));
+
+  return { document: createdDocument, chunks };
+};
+
+/**
+ * Process an Excel file
+ */
+const processExcelFile = async (
+  file: DiscoveredFile,
+  tenantId: string,
+  contentType: string,
+  contentTypeConfig?: ContentTypeConfig
+): Promise<{ document: Document; chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] }> => {
+  console.log(`  Parsing Excel: ${file.name}...`);
+  const parsedExcel = await parseExcel(file.path, file.name);
+
+  console.log(`  Extracted ${parsedExcel.totalRows} rows from ${parsedExcel.sheetNames.length} sheet(s)`);
+
+  // Convert rows to text chunks
+  const rowTexts = parsedExcel.rows.map((row) => ({
+    text: row.text,
+    metadata: row.metadata,
+  }));
+
+  console.log(`  Chunking text...`);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(rowTexts, chunkingConfig);
+
+  console.log(`  Created ${textChunks.length} chunks`);
+
+  // Generate embeddings
+  console.log(`  Generating embeddings...`);
+  const chunkTexts = textChunks.map((chunk) => chunk.text);
+  const embeddings = await generateEmbeddings(chunkTexts);
+
+  // Create document
+  const document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
+    tenantId,
+    sourcePath: file.path,
+    name: file.name,
+    contentType,
+    uploadedAt: new Date(),
+  };
+
+  const createdDocument = await createDocument(document);
+
+  // Create chunks
+  const chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] = textChunks.map((chunk, index) => ({
+    tenantId,
+    documentId: createdDocument.id,
+    chunkText: chunk.text,
+    chunkMetadata: chunk.metadata,
+    contentType,
+    embedding: embeddings[index] || null,
+  }));
+
+  return { document: createdDocument, chunks };
+};
+
+/**
+ * Process a PowerPoint file
+ */
+const processPowerPointFile = async (
+  file: DiscoveredFile,
+  tenantId: string,
+  contentType: string,
+  contentTypeConfig?: ContentTypeConfig
+): Promise<{ document: Document; chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] }> => {
+  console.log(`  Parsing PowerPoint: ${file.name}...`);
+  const parsedPowerPoint = await parsePowerPoint(file.path, file.name);
+
+  console.log(`  Extracted ${parsedPowerPoint.totalSlides} slides`);
+
+  // Convert slides to text chunks
+  const slideTexts = parsedPowerPoint.slides.map((slide) => ({
+    text: slide.text,
+    metadata: slide.metadata,
+  }));
+
+  console.log(`  Chunking text...`);
+  const chunkingConfig: ChunkingConfig = {
+    chunkSize: 2000,
+    overlap: 200,
+    useSemanticChunking: process.env.USE_SEMANTIC_CHUNKING === 'true',
+  };
+  const textChunks = await chunkMultipleTexts(slideTexts, chunkingConfig);
+
+  console.log(`  Created ${textChunks.length} chunks`);
+
+  // Generate embeddings
+  console.log(`  Generating embeddings...`);
+  const chunkTexts = textChunks.map((chunk) => chunk.text);
+  const embeddings = await generateEmbeddings(chunkTexts);
+
+  // Create document
+  const document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
+    tenantId,
+    sourcePath: file.path,
+    name: file.name,
+    contentType,
+    uploadedAt: new Date(),
+  };
+
+  const createdDocument = await createDocument(document);
+
+  // Create chunks
+  const chunks: Omit<DocumentChunk, 'id' | 'createdAt'>[] = textChunks.map((chunk, index) => ({
+    tenantId,
+    documentId: createdDocument.id,
+    chunkText: chunk.text,
+    chunkMetadata: chunk.metadata,
+    contentType,
+    embedding: embeddings[index] || null,
+  }));
+
+  return { document: createdDocument, chunks };
+};
+
+/**
  * Process a single file
  */
 const processFile = async (
@@ -275,6 +455,17 @@ const processFile = async (
       return processPdfFile(file, config.tenantId, contentType, config.contentTypeConfig);
     case '.csv':
       return processCsvFile(file, config.tenantId, contentType, config.contentTypeConfig);
+    case '.docx':
+      return processWordFile(file, config.tenantId, contentType, config.contentTypeConfig);
+    case '.doc':
+      throw new Error('Legacy .doc format is not supported. Please convert to .docx format.');
+    case '.xlsx':
+    case '.xls':
+      return processExcelFile(file, config.tenantId, contentType, config.contentTypeConfig);
+    case '.pptx':
+      return processPowerPointFile(file, config.tenantId, contentType, config.contentTypeConfig);
+    case '.ppt':
+      throw new Error('Legacy .ppt format is not supported. Please convert to .pptx format.');
     default:
       throw new Error(`Unsupported file type: ${file.type}`);
   }
