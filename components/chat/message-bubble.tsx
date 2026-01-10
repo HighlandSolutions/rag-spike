@@ -42,8 +42,17 @@ export const MessageBubble = ({ message, citations = [], onCitationClick }: Mess
   }, [isUser, citations, onCitationClick]);
 
   const formatMessageContent = (content: string): string => {
+    let formatted = content;
+    // Convert markdown headings to HTML headings (process before other formatting)
+    // Handle h1 through h6
+    formatted = formatted.replace(/^###### (.+)$/gm, '<h6 class="text-sm font-semibold mt-6 mb-3 text-foreground">$1</h6>');
+    formatted = formatted.replace(/^##### (.+)$/gm, '<h5 class="text-base font-semibold mt-6 mb-3 text-foreground">$1</h5>');
+    formatted = formatted.replace(/^#### (.+)$/gm, '<h4 class="text-lg font-semibold mt-6 mb-3 text-foreground">$1</h4>');
+    formatted = formatted.replace(/^### (.+)$/gm, '<h3 class="text-xl font-semibold mt-6 mb-3 text-foreground">$1</h3>');
+    formatted = formatted.replace(/^## (.+)$/gm, '<h2 class="text-2xl font-semibold mt-6 mb-4 text-foreground">$1</h2>');
+    formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-3xl font-bold mt-6 mb-4 text-foreground">$1</h1>');
     // Convert markdown bold (**text**) to HTML <strong> tags
-    let formatted = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     // Process citations after markdown formatting
     formatted = formatted.replace(
       /\[(\d+)\]/g,
@@ -91,6 +100,8 @@ export const MessageBubble = ({ message, citations = [], onCitationClick }: Mess
                 }}
                 className={cn(
                   'whitespace-pre-wrap break-words',
+                  '[&_h1]:first:mt-0 [&_h2]:first:mt-0 [&_h3]:first:mt-0 [&_h4]:first:mt-0 [&_h5]:first:mt-0 [&_h6]:first:mt-0',
+                  '[&_h1]:leading-tight [&_h2]:leading-tight [&_h3]:leading-tight',
                   !message.error &&
                     '[&_.citation-link]:cursor-pointer [&_.citation-link]:font-semibold [&_.citation-link]:text-primary [&_.citation-link]:underline [&_.citation-link]:decoration-dotted [&_.citation-link]:underline-offset-2 [&_.citation-link]:transition-opacity [&_.citation-link]:hover:opacity-80'
                 )}
