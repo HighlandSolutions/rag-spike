@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         documents: documents.map((doc) => ({
           id: doc.id,
           name: doc.name,
+          sourcePath: doc.sourcePath,
           contentType: doc.contentType,
           uploadedAt: doc.uploadedAt.toISOString(),
           createdAt: doc.createdAt.toISOString(),

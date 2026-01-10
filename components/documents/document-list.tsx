@@ -3,12 +3,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { File, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { 
+  File, 
+  FileText, 
+  FilePdf, 
+  FileSpreadsheet, 
+  FileWord, 
+  FilePresentation,
+  Globe,
+  Link as LinkIcon,
+  Trash2, 
+  Loader2, 
+  RefreshCw 
+} from 'lucide-react';
 
 interface Document {
   id: string;
   name: string;
+  sourcePath?: string;
   contentType: string;
   uploadedAt: string;
   createdAt: string;
@@ -99,15 +111,40 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
     });
   };
 
-  const getContentTypeBadgeVariant = (contentType: string): 'default' | 'secondary' | 'outline' => {
-    switch (contentType) {
-      case 'policies':
-        return 'default';
-      case 'learning_content':
-        return 'secondary';
-      default:
-        return 'outline';
+  const getDocumentIcon = (document: Document): React.ComponentType<{ className?: string }> => {
+    // Check if sourcePath is a URL (starts with http:// or https://)
+    if (document.sourcePath) {
+      const lowerSourcePath = document.sourcePath.toLowerCase();
+      if (lowerSourcePath.startsWith('http://') || lowerSourcePath.startsWith('https://')) {
+        return LinkIcon;
+      }
     }
+    
+    // Fallback: Check document name for URL pattern
+    const lowerName = document.name.toLowerCase();
+    if (lowerName.startsWith('http://') || lowerName.startsWith('https://')) {
+      return LinkIcon;
+    }
+    
+    // Check file extension from name
+    if (lowerName.endsWith('.pdf')) {
+      return FilePdf;
+    }
+    if (lowerName.endsWith('.csv') || lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
+      return FileSpreadsheet;
+    }
+    if (lowerName.endsWith('.docx') || lowerName.endsWith('.doc')) {
+      return FileWord;
+    }
+    if (lowerName.endsWith('.pptx') || lowerName.endsWith('.ppt')) {
+      return FilePresentation;
+    }
+    if (lowerName.endsWith('.txt') || lowerName.endsWith('.md')) {
+      return FileText;
+    }
+    
+    // Default to generic file icon
+    return File;
   };
 
   if (isLoading) {
@@ -164,13 +201,13 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  {(() => {
+                    const IconComponent = getDocumentIcon(document);
+                    return <IconComponent className="h-5 w-5 text-muted-foreground flex-shrink-0" />;
+                  })()}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{document.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={getContentTypeBadgeVariant(document.contentType)} className="text-xs">
-                        {document.contentType}
-                      </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(document.uploadedAt)}
                       </span>

@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { chunkMultipleTexts, type ChunkingConfig } from '@/lib/ingestion/chunking';
 import { generateEmbeddings } from '@/lib/ingestion/embeddings';
 import { createDocument, createChunks, getDocumentsByTenant } from '@/lib/supabase/queries';
-import { getContentType } from '@/lib/ingestion/content-type-config';
 import { parseUrl, validateUrl, type UrlParserConfig } from '@/lib/ingestion/url-parser';
 import type { Document, DocumentChunk, ChunkMetadata } from '@/types/domain';
 import type { ApiError } from '@/types/domain';
@@ -82,15 +81,12 @@ const processUrl = async (
   const chunkTexts = textChunks.map((chunk) => chunk.text);
   const embeddings = await generateEmbeddings(chunkTexts);
 
-  // Get content type
-  const contentType = getContentType(parsedUrl.title || url, '');
-
-  // Create document
+  // Create document (content type set to 'all' - tagging system removed)
   const document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
     tenantId,
     sourcePath: url, // Store URL as sourcePath
     name: parsedUrl.title || url,
-    contentType,
+    contentType: 'all',
     uploadedAt: parsedUrl.fetchedAt,
   };
 
@@ -140,7 +136,8 @@ const processFileBuffer = async (
     throw new Error(`Unsupported file type: ${fileName}`);
   }
 
-  const contentType = getContentType(fileName, extension);
+  // Content type set to 'all' - tagging system removed
+  const contentType = 'all';
 
   // Check if document already exists
   const exists = await documentExists(tenantId, fileName);

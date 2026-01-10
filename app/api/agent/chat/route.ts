@@ -5,12 +5,11 @@
 
 import { NextRequest } from 'next/server';
 import { search } from '@/lib/rag/search';
-import { determineContentFilters } from '@/lib/agent/content-filters';
 import { determineToolsToExecute, executeTools } from '@/lib/agent/tools';
 import { composePrompt, extractChunkIds } from '@/lib/agent/prompt-builder';
 import { streamLLMResponse } from '@/lib/agent/llm-client';
 import { getSupabaseServerClient } from '@/lib/supabase/client';
-import type { ChatRequest, ApiError, UserContext, SearchRequest, ContentType } from '@/types/domain';
+import type { ChatRequest, ApiError, UserContext, SearchRequest } from '@/types/domain';
 import type { ChatMessage } from '@/types/chat';
 import type { ChatMessageRow } from '@/types/database';
 import type { QueryProcessingConfig } from '@/lib/rag/query-processing';
@@ -48,9 +47,6 @@ export async function POST(request: NextRequest) {
       sessionId: body.session_id as string | undefined,
     };
 
-    // Determine content filters based on user context
-    const contentFilters = determineContentFilters(chatRequest.userContext);
-
     // Load conversation history if session ID is provided
     let conversationHistory: ChatMessage[] | undefined;
     if (chatRequest.sessionId) {
@@ -78,13 +74,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build search request
+    // Build search request (content type filtering removed)
     const searchRequest: SearchRequest = {
       tenantId: DEFAULT_TENANT_ID,
       userContext: chatRequest.userContext,
       query: chatRequest.question,
       k: 8, // Default to 8 chunks
-      filters: contentFilters ? { contentType: contentFilters as ContentType[] } : undefined,
     };
 
     // Query processing configuration (can be customized via env vars or request body)

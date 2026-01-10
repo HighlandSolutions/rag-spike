@@ -313,13 +313,8 @@ export const search = async (
     };
   }
 
-  // Determine content type filters
-  const contentTypeFilters =
-    filters?.contentType && filters.contentType !== 'all'
-      ? Array.isArray(filters.contentType)
-        ? filters.contentType
-        : [filters.contentType]
-      : null;
+  // Content type filtering removed - always search all content
+  const contentTypeFilters = null;
 
   // Apply document ID filters if provided
   const documentIdFilters = filters?.documentIds;
@@ -338,25 +333,8 @@ export const search = async (
     // Get all query variations to search with
     const queryVariations = getQueryVariations(processedQuery);
     
-    // If query understanding suggests content types, merge with existing filters
-    let finalContentTypeFilters = contentTypeFilters;
-    if (processedQuery.understanding?.requiredContentTypes && processedQuery.understanding.requiredContentTypes.length > 0) {
-      // Merge suggested content types with existing filters
-      const suggested = processedQuery.understanding.requiredContentTypes;
-      // Validate and filter to only valid ContentType values
-      const validContentTypes: ContentType[] = ['policies', 'learning_content', 'internal_roles', 'all'];
-      const validSuggested = suggested.filter((type): type is ContentType => 
-        validContentTypes.includes(type as ContentType)
-      ) as ContentType[];
-      
-      if (finalContentTypeFilters) {
-        // Intersection: only keep types that are in both
-        finalContentTypeFilters = finalContentTypeFilters.filter((type) => validSuggested.includes(type));
-      } else if (validSuggested.length > 0) {
-        // Use suggested types if no filters exist
-        finalContentTypeFilters = validSuggested;
-      }
-    }
+    // Content type filtering removed - always use null (search all content)
+    const finalContentTypeFilters = null;
 
     logInfo('Searching with query variations', {
       originalQuery: query.substring(0, 100),

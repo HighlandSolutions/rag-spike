@@ -146,8 +146,6 @@ export const CitationTooltip = ({
           <p className="line-clamp-3 text-xs text-muted-foreground">{citation.snippet}</p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span className="font-medium">Source {citation.citationNumber}</span>
-            <span className="text-xs">•</span>
-            <span>{citation.contentType}</span>
           </div>
         </div>
       </div>

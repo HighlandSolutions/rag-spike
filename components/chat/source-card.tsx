@@ -1,7 +1,6 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export interface SourceCardData {
@@ -38,9 +37,6 @@ export const SourceCard = ({ citation, className, isHighlighted }: SourceCardPro
             <p className="mt-1 text-xs text-muted-foreground">{citation.location}</p>
           )}
         </div>
-        <Badge variant="secondary" className="shrink-0 text-xs">
-          {citation.contentType}
-        </Badge>
       </div>
       <p className="line-clamp-3 text-xs text-muted-foreground">{citation.snippet}</p>
       <div className="flex items-center gap-1 text-xs text-muted-foreground">

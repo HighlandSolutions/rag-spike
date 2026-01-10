@@ -10,7 +10,7 @@ interface SourceListItemProps {
   onClick?: () => void;
 }
 
-const getSourceIcon = (contentType: string, location?: string) => {
+const getSourceIcon = (location?: string) => {
   if (location) {
     const url = location.toLowerCase();
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
@@ -136,7 +136,7 @@ export const SourceListItem = ({ source, isHighlighted, onClick }: SourceListIte
       aria-label={`Source ${source.citationNumber}: ${source.documentName}`}
     >
       <div className="flex-shrink-0 mt-0.5">
-        {getSourceIcon(source.contentType, source.location)}
+        {getSourceIcon(source.location)}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
