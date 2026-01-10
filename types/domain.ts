@@ -25,6 +25,12 @@ export interface ChunkMetadata {
   columnNames?: string[];
   fileName?: string;
   sourceLocation?: string;
+  // URL-specific metadata
+  url?: string;
+  pageTitle?: string;
+  pageDescription?: string;
+  fetchedAt?: string; // ISO timestamp
+  lastModified?: string; // ISO timestamp
   [key: string]: unknown;
 }
 
