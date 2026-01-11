@@ -103,7 +103,7 @@ export const Sidebar = ({ currentSessionId, onNewChat, onLoadSession, isPinned, 
               ? 'text-primary'
               : 'text-muted-foreground hover:text-foreground'
           }`}
-          aria-label="Documents"
+          aria-label="Sources"
           aria-current={isDocumentsPage ? 'page' : undefined}
         >
           <div
@@ -120,7 +120,7 @@ export const Sidebar = ({ currentSessionId, onNewChat, onLoadSession, isPinned, 
               isDocumentsPage ? 'text-primary font-medium' : 'text-muted-foreground'
             }`}
           >
-            Documents
+            Sources
           </span>
         </Link>
 

@@ -15,6 +15,22 @@ export interface ChatSession {
 }
 
 /**
+ * Safely parse error response from API
+ * Handles cases where response body might be empty or not valid JSON
+ */
+async function parseErrorResponse(response: Response): Promise<{ message?: string }> {
+  try {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Create a new chat session
  */
 export async function createChatSession(
@@ -33,8 +49,8 @@ export async function createChatSession(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create chat session');
+    const error = await parseErrorResponse(response);
+    throw new Error(error.message || `Failed to create chat session (${response.status})`);
   }
 
   return response.json();
@@ -61,8 +77,8 @@ export async function saveChatMessage(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to save message');
+    const error = await parseErrorResponse(response);
+    throw new Error(error.message || `Failed to save message (${response.status})`);
   }
 }
 
@@ -73,8 +89,8 @@ export async function loadChatMessages(sessionId: string): Promise<ChatMessage[]
   const response = await fetch(`/api/chat/sessions/${sessionId}/messages`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to load messages');
+    const error = await parseErrorResponse(response);
+    throw new Error(error.message || `Failed to load messages (${response.status})`);
   }
 
   const data = await response.json();
@@ -105,8 +121,8 @@ export async function listChatSessions(limit = 50, offset = 0): Promise<ChatSess
   const response = await fetch(`/api/chat/sessions?limit=${limit}&offset=${offset}`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to list chat sessions');
+    const error = await parseErrorResponse(response);
+    throw new Error(error.message || `Failed to list chat sessions (${response.status})`);
   }
 
   const data = await response.json();
@@ -129,8 +145,8 @@ export async function updateChatSession(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update chat session');
+    const error = await parseErrorResponse(response);
+    throw new Error(error.message || `Failed to update chat session (${response.status})`);
   }
 
   return response.json();
@@ -145,8 +161,8 @@ export async function deleteChatSession(sessionId: string): Promise<void> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to delete chat session');
+    const error = await parseErrorResponse(response);
+    throw new Error(error.message || `Failed to delete chat session (${response.status})`);
   }
 }
 

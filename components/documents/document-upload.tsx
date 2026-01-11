@@ -183,7 +183,7 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Upload Document</h2>
+          <h2 className="text-lg font-semibold">Upload Source</h2>
         </div>
 
         {/* Upload mode toggle */}
@@ -329,7 +329,7 @@ export const DocumentUpload = ({ onUploadSuccess, tenantId }: DocumentUploadProp
               ) : (
                 <>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Document
+                  Upload Source
                 </>
               )}
             </>

@@ -14,7 +14,7 @@ interface MessageListProps {
 }
 
 const EXAMPLE_QUESTIONS = [
-  'What documents are available?',
+  'What sources are available?',
   'Summarize the key points',
   'Explain this in detail',
 ];
@@ -48,7 +48,7 @@ export const MessageList = ({ messages, citationsMap = new Map(), onCitationClic
           </h2>
           
           <p className="text-base text-muted-foreground mb-8 max-w-md mx-auto">
-            Ask a question to get started. I can help you find information from your documents.
+            Ask a question to get started. I can help you find information from your sources.
           </p>
 
           <div className="space-y-2">

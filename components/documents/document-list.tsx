@@ -162,7 +162,7 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Documents</h2>
+            <h2 className="text-lg font-semibold">Sources</h2>
             <Button variant="outline" size="sm" onClick={fetchDocuments}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -180,7 +180,7 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
     <Card className="p-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Documents ({documents.length})</h2>
+          <h2 className="text-lg font-semibold">Sources ({documents.length})</h2>
           <Button variant="outline" size="sm" onClick={fetchDocuments} disabled={isLoading}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -190,8 +190,8 @@ export const DocumentList = ({ tenantId, onDocumentDeleted }: DocumentListProps)
         {documents.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <File className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No documents uploaded yet</p>
-            <p className="text-sm mt-2">Upload a document to get started</p>
+            <p>No sources uploaded yet</p>
+            <p className="text-sm mt-2">Upload a document or URL to get started</p>
           </div>
         ) : (
           <div className="space-y-2">

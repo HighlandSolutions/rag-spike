@@ -308,6 +308,28 @@ export default function Home() {
   // Aggregate all sources from all messages
   const allSources = Array.from(citationsMap.values()).flat();
 
+  // Check if there's at least one completed assistant message
+  // Only show tabs when there are messages AND at least one completed assistant response
+  // This ensures tabs don't show in empty state or when only user messages exist
+  // Must have: role === 'assistant', not loading, and has non-empty content
+  const hasCompletedAssistantMessage = (() => {
+    // Explicitly return false for empty state
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return false;
+    }
+    
+    // Check for at least one completed assistant message
+    return messages.some(
+      (msg) => {
+        if (msg.role !== 'assistant') return false;
+        if (msg.isLoading === true) return false;
+        if (!msg.content || typeof msg.content !== 'string') return false;
+        if (msg.content.trim().length === 0) return false;
+        return true;
+      }
+    );
+  })();
+
   return (
     <div className="flex h-screen flex-col relative">
       {/* Sidebar */}
@@ -324,26 +346,52 @@ export default function Home() {
         isChatHistoryPinned ? 'ml-80' : 'ml-16'
       }`}>
         <div className="flex flex-1 flex-col min-w-0 w-full max-w-6xl mx-auto h-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col h-full min-h-0">
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
-              <div className="w-full max-w-6xl mx-auto px-4 sm:px-6">
-                <TabsList className="w-full justify-start rounded-none bg-transparent h-auto p-0 gap-0 border-none">
-                  <TabsTrigger
-                    value="answer"
-                    className="rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground border-b-2 border-transparent hover:text-foreground transition-colors"
-                  >
-                    Answer
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="sources"
-                    className="rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground border-b-2 border-transparent hover:text-foreground transition-colors"
-                  >
-                    Sources
-                  </TabsTrigger>
-                </TabsList>
+          {hasCompletedAssistantMessage ? (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col h-full min-h-0">
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+                <div className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+                  <TabsList className="w-full justify-start rounded-none bg-transparent h-auto p-0 gap-0 border-none">
+                    <TabsTrigger
+                      value="answer"
+                      className="rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground border-b-2 border-transparent hover:text-foreground transition-colors"
+                    >
+                      Answer
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="sources"
+                      className="rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground border-b-2 border-transparent hover:text-foreground transition-colors"
+                    >
+                      Sources
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
               </div>
-            </div>
-            <TabsContent value="answer" className="flex-1 flex flex-col overflow-hidden mt-0 min-h-0 h-full">
+              <TabsContent value="answer" className="flex-1 flex flex-col overflow-hidden mt-0 min-h-0 h-full">
+                <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 min-h-0">
+                  <MessageList 
+                    messages={messages} 
+                    citationsMap={citationsMap}
+                    onCitationClick={handleCitationClick}
+                    onExampleQuestionClick={handleExampleQuestionClick}
+                  />
+                </div>
+                <div className="flex-shrink-0 w-full">
+                  <ChatInput
+                    onSendMessage={handleSendMessage}
+                    disabled={isLoading}
+                    placeholder="Ask a question..."
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent 
+                value="sources" 
+                className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 mt-0"
+              >
+                <SourceCards citations={allSources} highlightedCitation={highlightedCitation} />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="flex flex-1 flex-col overflow-hidden h-full min-h-0">
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 min-h-0">
                 <MessageList 
                   messages={messages} 
@@ -359,14 +407,8 @@ export default function Home() {
                   placeholder="Ask a question..."
                 />
               </div>
-            </TabsContent>
-            <TabsContent 
-              value="sources" 
-              className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 mt-0"
-            >
-              <SourceCards citations={allSources} highlightedCitation={highlightedCitation} />
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </div>
       </main>
 

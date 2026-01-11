@@ -22,9 +22,9 @@ export const DocumentManagement = ({ tenantId }: DocumentManagementProps) => {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Document Management</h1>
+        <h1 className="text-2xl font-bold">Source Management</h1>
         <p className="text-muted-foreground">
-          Upload and manage documents for the RAG system
+          Upload and manage documents and URLs for the RAG system
         </p>
       </div>
 
